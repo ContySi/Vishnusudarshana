@@ -1,25 +1,13 @@
 {
   "date": "",
   "weekday": "",
-  "shaka": "",
-  "samvatsar": "",
-  "paksha": "",
   "tithi": "",
   "nakshatra": "",
-  "ayan": "",
-  "rutu": "",
-  "maas": "",
-  "yog": "",
-  "karan": "",
-  "sunrise": "पुणे/सोलापूरसाठी अंदाजे सूर्योदय वेळ",
-  "sunset": "पुणे/सोलापूरसाठी अंदाजे सूर्यास्त वेळ",
-  "rahukaal": "आजचा राहुकाळ वेळ पुणे/सोलापूरसाठी अंदाजे",
-  "shubhashubh": "आजचा शुभ-अशुभ दिवस सारांश",
-  "dinvishesh": "आजच्या दिवसाचे धार्मिक/सांस्कृतिक महत्व (१०–२० ओळी)",
-  "vivahmuhurat": "",
-  "gruhapraveshmuhurat": "",
-  "vehiclepurchasemuhurat": "",
-  "businessstartmuhurat": ""
-    },
-    "generated_at": "2025-12-17 00:15:58"
+  "yoga": "",
+  "karana": "",
+  "sunrise": "",
+  "sunset": "",
+  "auspicious_timings": "",
+  "inauspicious_timings": "",
+  "day_significance": ""
 }

@@ -1,3 +1,8 @@
+<!--
+    Base language of this platform is English. All content must be written in English only.
+    Do not add or auto-generate Marathi or Hindi text in source files.
+    Use Google Translate widget for user-facing translation only.
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>

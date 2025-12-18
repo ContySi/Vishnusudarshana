@@ -22,45 +22,45 @@ function getPanchangValue($key, $default = '—') {
         <!-- CARD 1: Panchang -->
         <article class="summary-card">
             <div class="card-header">
-                <h3>आजचा पंचांग</h3>
+                <h3>Today's Panchang</h3>
             </div>
             <div class="card-body">
                 <ul class="panchang-list">
-                    <li><strong>तिथि:</strong> <?php echo getPanchangValue('tithi'); ?></li>
-                    <li><strong>वार:</strong> <?php echo getPanchangValue('weekday'); ?></li>
-                    <li><strong>नक्षत्र:</strong> <?php echo getPanchangValue('nakshatra'); ?></li>
-                    <li><strong>राहुकाळ:</strong> <?php echo getPanchangValue('rahukaal aajcha rahukal vel Pune Solapur sathi andajit'); ?></li>
+                    <li><strong>Tithi:</strong> <?php echo getPanchangValue('tithi'); ?></li>
+                    <li><strong>Weekday:</strong> <?php echo getPanchangValue('weekday'); ?></li>
+                    <li><strong>Nakshatra:</strong> <?php echo getPanchangValue('nakshatra'); ?></li>
+                    <li><strong>Rahu Kalam:</strong> <?php echo getPanchangValue('rahukaal aajcha rahukal vel Pune Solapur sathi andajit'); ?></li>
                 </ul>
             </div>
             <div class="card-footer">
-                <a href="panchang.php" class="card-btn">संपूर्ण पंचांग पहा</a>
+                <a href="panchang.php" class="card-btn">View Full Panchang</a>
             </div>
         </article>
 
         <!-- CARD 2: Din Vishesh -->
         <article class="summary-card">
             <div class="card-header">
-                <h3>आजचा दिनविशेष</h3>
-                <p><strong>दिनविशेष:</strong> <?php echo getPanchangValue('dinvishesh aajchya divsache dharmik sanskrutik mahatva 10 to 20 oli'); ?></p>
+                <h3>Today's Significance</h3>
+                <p><strong>Significance:</strong> <?php echo getPanchangValue('dinvishesh aajchya divsache dharmik sanskrutik mahatva 10 to 20 oli'); ?></p>
             <div class="card-footer">
-                <a href="din-vishesh.php" class="card-btn">अधिक वाचा</a>
+                <a href="din-vishesh.php" class="card-btn">Read More</a>
             </div>
         </article>
 
         <!-- CARD 3: Shubh Muhurat -->
         <article class="summary-card">
             <div class="card-header">
-                <h3>आजचे शुभ मुहूर्त</h3>
+                <h3>Today's Auspicious Timings</h3>
             </div>
             <div class="card-body">
                 <ul class="muhurat-list">
-                    <li><strong>विवाह:</strong> <?php echo getPanchangValue('vivahmuhurat'); ?></li>
-                    <li><strong>गृहप्रवेश:</strong> <?php echo getPanchangValue('gruhapraveshmuhurat'); ?></li>
-                    <li><strong>वाहन खरेदी:</strong> <?php echo getPanchangValue('vehiclepurchasemuhurat'); ?></li>
+                    <li><strong>Marriage:</strong> <?php echo getPanchangValue('vivahmuhurat'); ?></li>
+                    <li><strong>House Warming:</strong> <?php echo getPanchangValue('gruhapraveshmuhurat'); ?></li>
+                    <li><strong>Vehicle Purchase:</strong> <?php echo getPanchangValue('vehiclepurchasemuhurat'); ?></li>
                 </ul>
             </div>
             <div class="card-footer">
-                <a href="muhurat.php" class="card-btn">सर्व मुहूर्त पहा</a>
+                <a href="muhurat.php" class="card-btn">View All Timings</a>
             </div>
         </article>
 
@@ -70,29 +70,29 @@ function getPanchangValue($key, $default = '—') {
         </section>
 
 
-        <!-- Why Vishnusudarshana Dharmik Platform Section -->
+        <!-- Why This Platform Exists Section -->
         <section class="why-vishnusudarshana-section">
-            <h2 class="why-title" data-i18n="home_why_title">Why Vishnusudarshana Dharmik Platform?</h2>
+            <h2 class="why-title">Why This Platform Exists</h2>
             <div class="why-cards">
                 <div class="why-card">
                     <div class="why-icon" aria-label="Long Waiting & Repeated Visits">😓</div>
                     <div class="why-card-content">
-                        <h3>Long Waiting & Repeated Visits</h3>
-                        <p>Many devotees visit daily.<br>Long queues and repeated visits even for small services.</p>
+                        <h3>Less Waiting, Less Trouble</h3>
+                        <p>Many people visit temples and service centers every day. This can mean long lines and waiting, even for simple needs. We want to make things easier for everyone.</p>
                     </div>
                 </div>
                 <div class="why-card">
                     <div class="why-icon" aria-label="Simple Digital Solution">📱</div>
                     <div class="why-card-content">
-                        <h3>Simple Digital Solution</h3>
-                        <p>Submit details online and book services<br>without standing in long queues.</p>
+                        <h3>Simple and Safe</h3>
+                        <p>You can send your details and requests online. This helps you avoid crowds and saves your time. You can do this from home or with help from family.</p>
                     </div>
                 </div>
                 <div class="why-card">
                     <div class="why-icon" aria-label="Peaceful & Organized Service">🙏</div>
                     <div class="why-card-content">
-                        <h3>Peaceful & Organized Service</h3>
-                        <p>Panditji focuses on rituals,<br>our team manages the process and updates.</p>
+                        <h3>Peaceful and Organized</h3>
+                        <p>Panditji and our team will take care of your service with respect. We keep you informed and make sure everything is done properly.</p>
                     </div>
                 </div>
             </div>
@@ -104,57 +104,57 @@ function getPanchangValue($key, $default = '—') {
             <ul class="who-for-list">
                 <li class="who-for-item">
                     <span class="who-for-icon" aria-label="Families with newborns">👶</span>
-                    <span class="who-for-content"><strong>Families with newborns</strong><br><span class="who-for-desc">Janma Patrika, naming and sanskar services.</span></span>
+                    <span class="who-for-content"><strong>Families with Newborns</strong><br><span class="who-for-desc">For Janma Patrika, naming, and sanskar services.</span></span>
                 </li>
                 <li class="who-for-item">
                     <span class="who-for-icon" aria-label="Marriage-related guidance">💍</span>
-                    <span class="who-for-content"><strong>Marriage-related guidance</strong><br><span class="who-for-desc">Kundali Milan and marriage consultation.</span></span>
+                    <span class="who-for-content"><strong>Marriage Guidance</strong><br><span class="who-for-desc">For Kundali Milan and marriage advice.</span></span>
                 </li>
                 <li class="who-for-item">
                     <span class="who-for-icon" aria-label="Working professionals">💼</span>
-                    <span class="who-for-content"><strong>Working professionals</strong><br><span class="who-for-desc">Limited time, easy online service access.</span></span>
+                    <span class="who-for-content"><strong>Working Professionals</strong><br><span class="who-for-desc">For those with limited time who want easy online access.</span></span>
                 </li>
                 <li class="who-for-item">
                     <span class="who-for-icon" aria-label="Devotees from other cities">🏙</span>
-                    <span class="who-for-content"><strong>Devotees from other cities</strong><br><span class="who-for-desc">Online requests without travel.</span></span>
+                    <span class="who-for-content"><strong>Devotees from Other Cities</strong><br><span class="who-for-desc">For those who cannot travel but want to request services.</span></span>
                 </li>
                 <li class="who-for-item">
                     <span class="who-for-icon" aria-label="Elderly people">👴</span>
-                    <span class="who-for-content"><strong>Elderly people</strong><br><span class="who-for-desc">Less waiting, simple tracking.</span></span>
+                    <span class="who-for-content"><strong>Elderly People</strong><br><span class="who-for-desc">For elders who want less waiting and simple tracking.</span></span>
                 </li>
             </ul>
         </section>
 
-        <!-- How to Use This Platform Section -->
+        <!-- How This Platform Works Section -->
         <section class="how-to-use-section">
-            <h2 class="how-title" data-i18n="home_how_title">How to Use This Platform</h2>
+            <h2 class="how-title">How This Platform Works</h2>
             <div class="how-steps">
                 <div class="how-step-card">
                     <div class="how-step-icon" aria-label="Choose Service">1️⃣</div>
                     <div class="how-step-content">
-                        <h3>Choose Service</h3>
-                        <p>Select the required service from the Services section.</p>
+                        <h3>Choose a Service</h3>
+                        <p>Look through the list of services and pick what you need.</p>
                     </div>
                 </div>
                 <div class="how-step-card">
                     <div class="how-step-icon" aria-label="Submit Details">2️⃣</div>
                     <div class="how-step-content">
-                        <h3>Submit Details</h3>
-                        <p>Fill a simple form or book an appointment online.</p>
+                        <h3>Share Your Details</h3>
+                        <p>Fill out a simple form or ask a family member to help. You can also book an appointment online.</p>
                     </div>
                 </div>
                 <div class="how-step-card">
                     <div class="how-step-icon" aria-label="We Process">3️⃣</div>
                     <div class="how-step-content">
-                        <h3>We Process</h3>
-                        <p>Our staff and Panditji perform the required service.</p>
+                        <h3>We Arrange the Service</h3>
+                        <p>Our staff and Panditji will prepare and perform your chosen service with care.</p>
                     </div>
                 </div>
                 <div class="how-step-card">
                     <div class="how-step-icon" aria-label="Get Updates">4️⃣</div>
                     <div class="how-step-content">
                         <h3>Get Updates</h3>
-                        <p>Track your service status or receive delivery or call.</p>
+                        <p>You can check the status of your service or get a call or delivery update from us.</p>
                     </div>
                 </div>
             </div>
@@ -162,7 +162,7 @@ function getPanchangValue($key, $default = '—') {
 
         <!-- Services Available Online Section -->
         <section class="services-online-section">
-            <h2 class="services-online-title">Services Available Online</h2>
+            <h2 class="services-online-title">Services You Can Request Online</h2>
             <div class="services-online-cards">
                 <a href="services.php" class="service-online-card" aria-label="Janma Patrika">
                     <span class="service-online-icon">📜</span>
@@ -186,15 +186,15 @@ function getPanchangValue($key, $default = '—') {
                 </a>
             </div>
             <div class="services-online-btn-wrap">
-                <a href="services.php" class="services-online-btn">View All Services &rarr;</a>
+                <a href="services.php" class="services-online-btn">See All Services &rarr;</a>
             </div>
         </section>
 
-        <!-- Call-to-Action Section: Need Personal Guidance? -->
+        <!-- Book Appointment Section -->
         <section class="cta-guidance-section">
             <div class="cta-guidance-container">
-                <h2 class="cta-guidance-title">Need Personal Guidance?</h2>
-                <p class="cta-guidance-text">Book an online or in-person appointment<br>for astrology, vastu or important life decisions.</p>
+                <h2 class="cta-guidance-title">Book Appointment</h2>
+                <p class="cta-guidance-text">You can book an appointment for a consultation or service. Choose online or in-person, as you prefer. We are here to help with astrology, vastu, or other important matters.</p>
                 <div class="cta-guidance-btns">
                     <a href="services.php" class="cta-guidance-btn">Book Consultation</a>
                     <a href="services.php" class="cta-guidance-btn secondary">Book Appointment</a>

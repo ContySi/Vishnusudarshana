@@ -34,65 +34,54 @@ if (!$OPENAI_API_KEY) {
 ============================================ */
 $todayDate = date('Y-m-d');
 
+$weekday = date('l');
 $aiPrompt = "
-आजची तारीख: {$todayDate}
+Today's date: {$todayDate}
+Weekday: {$weekday}
+Location: Maharashtra (Pune / Solapur region)
+Timezone: Indian Standard Time (IST)
 
-आजची तारीख: {{SERVER_DATE}}
-आजचा वार: {{SERVER_WEEKDAY}}
-स्थान: महाराष्ट्र (पुणे / सोलापूर विभाग)
-भारतीय वेळप्रमाण (IST) वापरा.
+IMPORTANT RULES:
+- You must reply ONLY in valid JSON
+- Do NOT include any text outside JSON
+- Do NOT add or remove JSON keys
+- All content must be in clear, simple English
+- Do NOT use Marathi or Hindi anywhere
+- Do NOT provide exact minute or second timings
+- Times should be approximate or descriptive
+- This is for general guidance only, not final ritual advice
 
-तुम्ही फक्त वैध JSON स्वरूपात उत्तर द्यायचे आहे.
-JSON व्यतिरिक्त कोणताही मजकूर देऊ नका.
+SOURCE INSTRUCTION:
+- Panchang data must be based on Drik Panchang (https://www.drikpanchang.com/)
+- Use traditional Indian Panchang terminology in English
 
-खाली दिलेल्या JSON संरचनेप्रमाणेच उत्तर द्या.
-एकही key बदलू नका, काढू नका किंवा नवीन key जोडू नका.
+JSON STRUCTURE (MUST MATCH EXACTLY):
 
-ही माहिती सामान्य मार्गदर्शनासाठी आहे.
-अचूक मिनिट-सेकंद देऊ नका.
-वेळा वर्णनात्मक व पारंपरिक स्वरूपात द्या.
+{
+    \"date\": \"\",
+    \"weekday\": \"\",
+    \"shaka\": \"\",
+    \"samvatsar\": \"\",
+    \"paksha\": \"\",
+    \"tithi\": \"\",
+    \"nakshatra\": \"\",
+    \"ayan\": \"\",
+    \"rutu\": \"\",
+    \"maas\": \"\",
+    \"yog\": \"\",
+    \"karan\": \"\",
+    \"sunrise_time\": \"Approximate sunrise time for Pune/Solapur region\",
+    \"sunset_time\": \"Approximate sunset time for Pune/Solapur region\",
+    \"rahu_kalam\": \"Approximate Rahu Kalam period\",
+    \"day_summary\": \"Brief summary of whether the day is generally auspicious or inauspicious\",
+    \"day_significance\": \"10–20 lines explaining the religious and cultural significance of the day\",
+    \"marriage_muhurat\": \"General guidance for marriage muhurat availability today\",
+    \"house_warming_muhurat\": \"General guidance for house warming muhurat availability today\",
+    \"vehicle_purchase_muhurat\": \"General guidance for vehicle purchase muhurat availability today\",
+    \"business_start_muhurat\": \"General guidance for business start muhurat availability today\"
+}
 
-JSON structure (exact replica required):
-   
-तुम्ही फक्त वैध JSON स्वरूपात उत्तर द्यायचे आहे.
-JSON व्यतिरिक्त कोणताही मजकूर देऊ नका.
-
-Fetch today’s Panchang strictly from https://www.drikpanchang.com/
-only.
-
-Return Panchang details exactly as shown on Drik Panchang, but do not include any minute-second precision times.
-
-आजच्या दिनांकासाठी current date महाराष्ट्रासाठी सामान्य मार्गदर्शन स्वरूपात पंचांग माहिती तयार करा.
-
-सूचना:
-- कोणतेही अचूक मिनिट-सेकंद देऊ नका
-- वेळा अंदाजे किंवा वर्णनात्मक स्वरूपात द्या
-- विधी-संस्कारासाठी अंतिम सल्ला देऊ नका
-- भाषा मराठी असावी
-- पारंपरिक व सांस्कृतिक शैली ठेवा
-
-JSON मध्ये खालील keys असाव्यात:
-date,
-weekday,
-shaka,
-samvatsar,
-paksha,
-tithi,
-nakshatra,
-ayan,
-rutu,
-maas,
-yog,
-karan,
-sunrise Pune Solapur sathi andajit suryoday vel,
-sunset Pune Solapur sathi andajit suryast vel,
-rahukaal aajcha rahukal vel Pune Solapur sathi andajit,
-shubhashubh aajcha shubh ashubh divas saransh,
-dinvishesh aajchya divsache dharmik sanskrutik mahatva 10 to 20 oli,
-vivahmuhurat,
-gruhapraveshmuhurat,
-vehiclepurchasemuhurat,
-businessstartmuhurat
+Return ONLY valid JSON.
 ";
 
 /* ============================================
@@ -151,10 +140,13 @@ $responseText = $responseData['choices'][0]['message']['content'];
 /* ============================================
    PARSE JSON FROM AI
 ============================================ */
+
 $aiData = json_decode($responseText, true);
-// FORCE CORRECT DATE FROM SERVER
-$aiData['date'] = date('Y-m-d');
-$aiData['weekday'] = date('l');
+// FORCE CORRECT DATE FROM SERVER (English keys only)
+if (is_array($aiData)) {
+    $aiData['date'] = date('Y-m-d');
+    $aiData['weekday'] = date('l');
+}
 
 if (!$aiData) {
     echo "<pre>";

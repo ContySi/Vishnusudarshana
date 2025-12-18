@@ -25,78 +25,78 @@ function getPanchangValue($key, $default = '—') {
 
 <main class="main-content panchang-page">
     <header class="panchang-title">
-        <h1>आजचा संपूर्ण पंचांग</h1>
-        <p class="subtitle">(माहिती — केवळ संकेतार्थ)</p>
+        <h1>Today's Complete Panchang</h1>
+        <p class="subtitle">(Information — For reference only)</p>
     </header>
 
     <?php if ($fileNotFound): ?>
         <section class="panchang-error">
-            <p>आजचा पंचांग उपलब्ध नाही</p>
+            <p>Panchang not available for today.</p>
         </section>
     <?php else: ?>
         <div class="panchang-details">
             <div class="panchang-row">
-                <div class="label">दिनांक</div>
+                <div class="label">Date</div>
                 <div class="value"><?php echo getPanchangValue('date'); ?></div>
             </div>
             <div class="panchang-row">
-                <div class="label">वार</div>
+                <div class="label">Weekday</div>
                 <div class="value"><?php echo getPanchangValue('weekday'); ?></div>
             </div>
             <div class="panchang-row">
-                <div class="label">शक</div>
+                <div class="label">Shaka</div>
                 <div class="value"><?php echo getPanchangValue('shaka'); ?></div>
             </div>
             <div class="panchang-row">
-                <div class="label">संवत्सर</div>
+                <div class="label">Samvatsar</div>
                 <div class="value"><?php echo getPanchangValue('samvatsar'); ?></div>
             </div>
             <div class="panchang-row">
-                <div class="label">आयन</div>
+                <div class="label">Ayan</div>
                 <div class="value"><?php echo getPanchangValue('ayan'); ?></div>
             </div>
             <div class="panchang-row">
-                <div class="label">ऋतु</div>
+                <div class="label">Rutu</div>
                 <div class="value"><?php echo getPanchangValue('rutu'); ?></div>
             </div>
             <div class="panchang-row">
-                <div class="label">मास</div>
+                <div class="label">Month</div>
                 <div class="value"><?php echo getPanchangValue('maas'); ?></div>
             </div>
             <div class="panchang-row">
-                <div class="label">पक्ष</div>
+                <div class="label">Paksha</div>
                 <div class="value"><?php echo getPanchangValue('paksha'); ?></div>
             </div>
             <div class="panchang-row">
-                <div class="label">तिथी</div>
+                <div class="label">Tithi</div>
                 <div class="value"><?php echo getPanchangValue('tithi'); ?></div>
             </div>
             <div class="panchang-row">
-                <div class="label">नक्षत्र</div>
+                <div class="label">Nakshatra</div>
                 <div class="value"><?php echo getPanchangValue('nakshatra'); ?></div>
             </div>
             <div class="panchang-row">
-                <div class="label">योग</div>
+                <div class="label">Yoga</div>
                 <div class="value"><?php echo getPanchangValue('yog'); ?></div>
             </div>
             <div class="panchang-row">
-                <div class="label">करण</div>
+                <div class="label">Karana</div>
                 <div class="value"><?php echo getPanchangValue('karan'); ?></div>
             </div>
             <div class="panchang-row">
-                <div class="label">सूर्योदय</div>
+                <div class="label">Sunrise</div>
                 <div class="value"><?php echo getPanchangValue('sunrise Pune Solapur sathi andajit suryoday vel'); ?></div>
             </div>
             <div class="panchang-row">
-                <div class="label">सूर्यास्त</div>
+                <div class="label">Sunset</div>
                 <div class="value"><?php echo getPanchangValue('sunset Pune Solapur sathi andajit suryast vel'); ?></div>
             </div>
             <div class="panchang-row">
-                <div class="label">राहुकाळ</div>
+                <div class="label">Inauspicious Timings</div>
                 <div class="value"><?php echo getPanchangValue('rahukaal aajcha rahukal vel Pune Solapur sathi andajit'); ?></div>
             </div>
             <div class="panchang-row">
-                <div class="label">शुभाशुभ दिवस</div>
+                <div class="label">Auspicious/ Inauspicious Summary</div>
                 <div class="value"><?php echo getPanchangValue('shubhashubh aajcha shubh ashubh divas saransh'); ?></div>
             </div>
         </div>
@@ -104,8 +104,7 @@ function getPanchangValue($key, $default = '—') {
 
     <footer class="panchang-disclaimer">
         <hr class="divider" />
-        <p>“वरील पंचांग माहिती सामान्य मार्गदर्शनासाठी आहे.
-        विधी-संस्कारासाठी कृपया थेट सल्ला घ्यावा.”</p>
+        <p>“The above Panchang information is for general guidance only. Please consult an expert for rituals.”</p>
     </footer>
 </main>
 

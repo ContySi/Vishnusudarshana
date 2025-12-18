@@ -22,18 +22,18 @@ function getDinVishesh($default = '—') {
 
 <main class="main-content din-vishesh-content">
     <section>
-        <h1>आजचा दिनविशेष</h1>
+        <h1>Today's Significance</h1>
         <div class="din-meta">
-            <div class="din-day"><strong>तारीख:</strong> <?php echo $today; ?></div>
+            <div class="din-day"><strong>Date:</strong> <?php echo $today; ?></div>
         </div>
 
         <?php if ($fileNotFound): ?>
             <div style="background-color: #fffbe6; border: 1px solid #ffc069; border-radius: 8px; padding: 16px; color: #8B1538;">
-                <p style="margin: 0;">आजचा दिनविशेष माहिती उपलब्ध नाही</p>
+                <p style="margin: 0;">Today's significance information is not available.</p>
             </div>
         <?php else: ?>
             <article class="din-article">
-                <p><?php echo getDinVishesh('आजचा दिवस स्थानिक पद्धतीनुसार विशेष मानला जातो. सविस्तर माहिती शीघ्रच अपडेट करण्यात येईल.'); ?></p>
+                <p><?php echo getDinVishesh('Today is considered special as per local tradition. Detailed information will be updated soon.'); ?></p>
             </article>
         <?php endif; ?>
     </section>

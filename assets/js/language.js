@@ -2,18 +2,7 @@ console.log('language.js loaded');
 // --- Translation object ---
 const TRANSLATIONS = {
     en: {
-        nav_home: 'Home',
-        nav_services: 'Services',
-        nav_reels: 'Reels',
-        nav_track: 'Track',
-        home_why_title: 'Why Vishnusudarshana Dharmik Platform?',
-        home_how_title: 'How to Use This Platform',
-    },
-    hi: {
-        nav_home: 'होम',
-        nav_services: 'सेवाएँ',
-        nav_reels: 'रील्स',
-        nav_track: 'ट्रैक करें',
+        // All non-English translations removed. English base language only.
         home_why_title: 'विष्णुसुदर्शन धर्मिक मंच क्यों?',
         home_how_title: 'इस मंच का उपयोग कैसे करें',
     },

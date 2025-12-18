@@ -19,13 +19,13 @@ function getMuhurat($key, $default = '—') {
 
 <main class="main-content muhurat-page">
     <section class="muhurat-title">
-        <h1>आजचे शुभ मुहूर्त</h1>
-        <p class="subtitle">(Placeholder indicators — सल्ल्यासाठी तज्ज्ञांचा सल्ला घ्या)</p>
+        <h1>Today's Auspicious Timings</h1>
+        <p class="subtitle">(Placeholder indicators — Please consult an expert for advice)</p>
     </section>
 
     <section class="muhurat-list">
         <div class="muhurat-row">
-            <div class="muhurat-label">विवाह</div>
+            <div class="muhurat-label">Marriage</div>
             <div class="muhurat-status">
                 <span class="indicator indicator-green" aria-hidden="true"></span>
                 <span class="status-text"><?php echo getMuhurat('vivahmuhurat'); ?></span>
@@ -33,7 +33,7 @@ function getMuhurat($key, $default = '—') {
         </div>
 
         <div class="muhurat-row">
-            <div class="muhurat-label">गृहप्रवेश</div>
+                <div class="muhurat-label">Housewarming</div>
             <div class="muhurat-status">
                 <span class="indicator indicator-orange" aria-hidden="true"></span>
                 <span class="status-text"><?php echo getMuhurat('gruhapraveshmuhurat'); ?></span>
@@ -41,7 +41,7 @@ function getMuhurat($key, $default = '—') {
         </div>
 
         <div class="muhurat-row">
-            <div class="muhurat-label">वाहन खरेदी</div>
+                <div class="muhurat-label">Vehicle Purchase</div>
             <div class="muhurat-status">
                 <span class="indicator indicator-green" aria-hidden="true"></span>
                 <span class="status-text"><?php echo getMuhurat('vehiclepurchasemuhurat'); ?></span>
@@ -49,7 +49,7 @@ function getMuhurat($key, $default = '—') {
         </div>
 
         <div class="muhurat-row">
-            <div class="muhurat-label">व्यवसाय आरंभ</div>
+                <div class="muhurat-label">Business Start</div>
             <div class="muhurat-status">
                 <span class="indicator indicator-red" aria-hidden="true"></span>
                 <span class="status-text"><?php echo getMuhurat('businessstartmuhurat'); ?></span>
@@ -58,7 +58,7 @@ function getMuhurat($key, $default = '—') {
     </section>
 
     <section class="muhurat-note">
-        <p>अचूक मुहूर्तासाठी सल्ला घ्यावा.</p>
+        <p>Please consult an expert for exact timings.</p>
     </section>
 </main>
 

@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <main class="main-content">
     <section class="summary-card" style="max-width:500px;margin:0 auto;">
-        <h1 style="text-align:center;">कुंडली मिलान फॉर्म</h1>
+        <h1 style="text-align:center;">Kundali Milan Form</h1>
         <?php if (!empty($successMsg)): ?>
             <div class="card-success" style="background:#e6ffed;color:#237804;padding:16px 12px;border-radius:8px;margin-bottom:18px;text-align:center;font-weight:600;">
                 <?php echo $successMsg; ?>
@@ -58,51 +58,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if (empty($successMsg)): ?>
         <form class="kundali-milan-form" method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" autocomplete="off">
             <fieldset style="border:none; margin-bottom:18px;">
-                <legend style="font-weight:700; color:var(--maroon); margin-bottom:8px;">वराची माहिती (Groom Details)</legend>
+                <legend style="font-weight:700; color:var(--maroon); margin-bottom:8px;">Groom Details</legend>
                 <div class="form-group">
-                    <label for="groom_name">वराचे नाव</label>
+                    <label for="groom_name">Groom Name</label>
                     <input type="text" id="groom_name" name="groom_name" required autocomplete="name">
                 </div>
                 <div class="form-group">
-                    <label for="groom_dob">जन्म तारीख</label>
+                    <label for="groom_dob">Date of Birth</label>
                     <input type="date" id="groom_dob" name="groom_dob" required>
                 </div>
                 <div class="form-group">
-                    <label for="groom_tob">जन्म वेळ</label>
+                    <label for="groom_tob">Time of Birth</label>
                     <input type="time" id="groom_tob" name="groom_tob" required>
                 </div>
                 <div class="form-group">
-                    <label for="groom_place">जन्म स्थान</label>
+                    <label for="groom_place">Place of Birth</label>
                     <input type="text" id="groom_place" name="groom_place" required autocomplete="address-level2">
                 </div>
             </fieldset>
             <fieldset style="border:none; margin-bottom:18px;">
-                <legend style="font-weight:700; color:var(--maroon); margin-bottom:8px;">वधूची माहिती (Bride Details)</legend>
+                <legend style="font-weight:700; color:var(--maroon); margin-bottom:8px;">Bride Details</legend>
                 <div class="form-group">
-                    <label for="bride_name">वधूचे नाव</label>
+                    <label for="bride_name">Bride Name</label>
                     <input type="text" id="bride_name" name="bride_name" required autocomplete="name">
                 </div>
                 <div class="form-group">
-                    <label for="bride_dob">जन्म तारीख</label>
+                    <label for="bride_dob">Date of Birth</label>
                     <input type="date" id="bride_dob" name="bride_dob" required>
                 </div>
                 <div class="form-group">
-                    <label for="bride_tob">जन्म वेळ</label>
+                    <label for="bride_tob">Time of Birth</label>
                     <input type="time" id="bride_tob" name="bride_tob" required>
                 </div>
                 <div class="form-group">
-                    <label for="bride_place">जन्म स्थान</label>
+                    <label for="bride_place">Place of Birth</label>
                     <input type="text" id="bride_place" name="bride_place" required autocomplete="address-level2">
                 </div>
             </fieldset>
             <fieldset style="border:none; margin-bottom:18px;">
-                <legend style="font-weight:700; color:var(--maroon); margin-bottom:8px;">संपर्क (Contact)</legend>
+                <legend style="font-weight:700; color:var(--maroon); margin-bottom:8px;">Contact</legend>
                 <div class="form-group">
-                    <label for="mobile">मोबाइल नंबर</label>
+                    <label for="mobile">Mobile Number</label>
                     <input type="tel" id="mobile" name="mobile" required pattern="[0-9]{10,15}" autocomplete="tel">
                 </div>
                 <div class="form-group">
-                    <label for="notes">अतिरिक्त माहिती (Optional)</label>
+                    <label for="notes">Additional Information (Optional)</label>
                     <textarea id="notes" name="notes" rows="3"></textarea>
                 </div>
             </fieldset>
