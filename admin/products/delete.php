@@ -9,9 +9,8 @@ if (!$id || !is_numeric($id)) {
 // Confirm deletion
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['confirm']) && $_POST['confirm'] === 'yes') {
-        $stmt = $conn->prepare("DELETE FROM products WHERE id = ?");
-        $stmt->bind_param('i', $id);
-        $stmt->execute();
+        $stmt = $pdo->prepare("DELETE FROM products WHERE id = ?");
+        $stmt->execute([$id]);
         header('Location: index.php');
         exit;
     } else {

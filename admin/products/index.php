@@ -1,7 +1,6 @@
 <?php
-require_once '../../config/db.php';
+require_once __DIR__ . '/../../config/db.php';
 
-// Category mapping
 $categoryNames = [
     'birth-child' => 'Birth & Child Services',
     'marriage-matching' => 'Marriage & Matching',
@@ -10,10 +9,9 @@ $categoryNames = [
     'pooja-vastu-enquiry' => 'Pooja, Ritual & Vastu Enquiry',
 ];
 
-// Fetch products
-$stmt = $conn->prepare("SELECT * FROM products ORDER BY id DESC");
+$stmt = $pdo->prepare("SELECT * FROM products ORDER BY id DESC");
 $stmt->execute();
-$products = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -39,10 +37,10 @@ $products = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         <?php foreach ($products as $product): ?>
             <tr>
                 <td><?php echo $product['id']; ?></td>
-                <td><?php echo htmlspecialchars($product['name']); ?></td>
-                <td><?php echo $categoryNames[$product['category']] ?? $product['category']; ?></td>
+                <td><?php echo htmlspecialchars($product['product_name']); ?></td>
+                <td><?php echo $categoryNames[$product['category_slug']] ?? $product['category_slug']; ?></td>
                 <td>₹<?php echo number_format($product['price'], 2); ?></td>
-                <td><?php echo $product['status'] === 'active' ? 'Active' : 'Inactive'; ?></td>
+                <td><?php echo $product['is_active'] ? 'Active' : 'Inactive'; ?></td>
                 <td>
                     <a href="edit.php?id=<?php echo $product['id']; ?>">Edit</a> |
                     <a href="delete.php?id=<?php echo $product['id']; ?>" onclick="return confirm('Delete this product?');">Delete</a>
