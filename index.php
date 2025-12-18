@@ -72,7 +72,7 @@ function getPanchangValue($key, $default = '—') {
 
         <!-- Why Vishnusudarshana Dharmik Platform Section -->
         <section class="why-vishnusudarshana-section">
-            <h2 class="why-title">Why Vishnusudarshana Dharmik Platform?</h2>
+            <h2 class="why-title" data-i18n="home_why_title">Why Vishnusudarshana Dharmik Platform?</h2>
             <div class="why-cards">
                 <div class="why-card">
                     <div class="why-icon" aria-label="Long Waiting & Repeated Visits">😓</div>
@@ -127,7 +127,7 @@ function getPanchangValue($key, $default = '—') {
 
         <!-- How to Use This Platform Section -->
         <section class="how-to-use-section">
-            <h2 class="how-title">How to Use This Platform</h2>
+            <h2 class="how-title" data-i18n="home_how_title">How to Use This Platform</h2>
             <div class="how-steps">
                 <div class="how-step-card">
                     <div class="how-step-icon" aria-label="Choose Service">1️⃣</div>
