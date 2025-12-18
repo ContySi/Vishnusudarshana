@@ -4,7 +4,7 @@
     <section class="service-categories">
         <h1 class="services-title">Choose a Service Type</h1>
         <div class="categories-grid">
-            <a class="category-card" href="services.php?category=birth-child">
+            <a class="category-card" href="category.php?category=birth-child">
                 <div class="category-icon" aria-label="Birth & Child Services">👶</div>
                 <div class="category-info">
                     <h2>Birth & Child Services</h2>
@@ -12,7 +12,7 @@
                     <span class="category-badge paid">Paid Service</span>
                 </div>
             </a>
-            <a class="category-card" href="services.php?category=marriage-matching">
+            <a class="category-card" href="category.php?category=marriage-matching">
                 <div class="category-icon" aria-label="Marriage & Matching">💍</div>
                 <div class="category-info">
                     <h2>Marriage & Matching</h2>
@@ -20,7 +20,7 @@
                     <span class="category-badge paid">Paid Service</span>
                 </div>
             </a>
-            <a class="category-card" href="services.php?category=astrology-consultation">
+            <a class="category-card" href="category.php?category=astrology-consultation">
                 <div class="category-icon" aria-label="Astrology Consultation">🔮</div>
                 <div class="category-info">
                     <h2>Astrology Consultation</h2>
@@ -28,7 +28,7 @@
                     <span class="category-badge consult">Consultation</span>
                 </div>
             </a>
-            <a class="category-card" href="services.php?category=muhurat-event">
+            <a class="category-card" href="category.php?category=muhurat-event">
                 <div class="category-icon" aria-label="Muhurat & Event Guidance">📅</div>
                 <div class="category-info">
                     <h2>Muhurat & Event Guidance</h2>
@@ -36,7 +36,7 @@
                     <span class="category-badge guidance">Guidance</span>
                 </div>
             </a>
-            <a class="category-card" href="services.php?category=pooja-vastu-enquiry">
+            <a class="category-card" href="category.php?category=pooja-vastu-enquiry">
                 <div class="category-icon" aria-label="Pooja, Ritual & Vastu Enquiry">🕉️</div>
                 <div class="category-info">
                     <h2>Pooja, Ritual & Vastu Enquiry</h2>
