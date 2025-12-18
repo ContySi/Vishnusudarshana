@@ -1,3 +1,116 @@
+/* --- Mobile vertical stacking for Services Available Online section --- */
+@media (max-width: 768px) {
+    .services-online-cards {
+        flex-direction: column !important;
+        gap: 18px !important;
+        align-items: stretch !important;
+        width: 100% !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        box-sizing: border-box !important;
+        overflow-x: visible !important;
+    }
+    .services-online-cards > .service-online-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+    }
+}
+/* --- Mobile vertical stacking for How to Use This Platform section --- */
+@media (max-width: 768px) {
+    .how-steps {
+        flex-direction: column !important;
+        gap: 20px !important;
+        align-items: stretch !important;
+        width: 100% !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        box-sizing: border-box !important;
+        overflow-x: visible !important;
+    }
+    .how-steps > .how-step-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+    }
+}
+/* --- Mobile vertical stacking for Panchang cards only --- */
+@media (max-width: 768px) {
+    .summary-cards {
+        flex-direction: column !important;
+        gap: 20px !important;
+        align-items: stretch !important;
+        width: 100% !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        box-sizing: border-box !important;
+    }
+    .summary-cards > .summary-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+    }
+}
+/* --- Mobile fixes for Home page sections --- */
+@media (max-width: 768px) {
+    .summary-cards {
+        flex-direction: column;
+        gap: 18px;
+        padding-left: 12px;
+        padding-right: 12px;
+        box-sizing: border-box;
+    }
+    .summary-card {
+        padding: 14px;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    .card-btn { width: 100%; text-align: center; display: block; }
+}
+
+@media (max-width: 700px) {
+    .services-online-cards {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 12px;
+        padding-left: 16px;
+        padding-right: 8px;
+        box-sizing: border-box;
+        scroll-padding-left: 16px;
+    }
+    .service-online-card {
+        min-width: 120px;
+        max-width: 140px;
+        flex: 0 0 120px;
+        box-sizing: border-box;
+    }
+}
+
+@media (max-width: 900px) {
+    .how-steps {
+        flex-direction: row;
+        gap: 14px;
+        overflow-x: auto;
+        padding-left: 16px;
+        padding-right: 8px;
+        box-sizing: border-box;
+        scroll-padding-left: 16px;
+    }
+    .how-step-card {
+        min-width: 210px;
+        max-width: 240px;
+        flex: 0 0 210px;
+        box-sizing: border-box;
+    }
+}
 /* Who Is This Platform For Section */
 .who-for-section {
     margin-bottom: 36px;
