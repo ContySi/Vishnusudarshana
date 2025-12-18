@@ -69,15 +69,11 @@ foreach ($categoryFields as $catKey => &$fields) {
 }
 unset($fields);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // On submit, redirect to service-review.php with category (simulate data passing)
-    header('Location: service-review.php?category=' . urlencode($category));
-    exit;
-}
+// No PHP redirect logic here. Form will post directly to service-review.php.
 ?>
 <main class="main-content">
     <h1 class="form-title"><?php echo htmlspecialchars($categories[$category]); ?> — Service Form</h1>
-    <form method="post" class="service-form" autocomplete="off">
+    <form method="post" action="service-review.php?category=<?php echo urlencode($category); ?>" class="service-form" autocomplete="off">
         <section class="form-section">
             <h2 class="form-section-title">Your Details</h2>
             <?php foreach ($commonFields as $field): ?>

@@ -1,121 +1,153 @@
 <?php
+require_once 'header.php';
 require_once __DIR__ . '/config/db.php';
 
-// Step 2: Read GET parameters
+// Step 2: Read input
 $category = $_GET['category'] ?? '';
-$request_id = $_GET['request_id'] ?? '';
+$form_data = $_POST ?? [];
 
-if (!$category || !$request_id) {
+if (!$category || empty($form_data)) {
     echo '<h2>Missing information</h2>';
-    echo '<p>Category and request ID are required.</p>';
+    echo '<p>Category and form data are required.</p>';
     echo '<a href="services.php">&larr; Back to Services</a>';
     exit;
 }
-
-// Step 3: Load form data
-$stmt = $pdo->prepare('SELECT * FROM service_requests WHERE id = ?');
-$stmt->execute([$request_id]);
-$request = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$request) {
-    echo '<h2>Request not found</h2>';
-    echo '<a href="services.php">&larr; Back to Services</a>';
-    exit;
-}
-
-$form_data = json_decode($request['form_data_json'] ?? '{}', true);
 
 // Step 4: Load products
 $stmt = $pdo->prepare('SELECT * FROM products WHERE category_slug = ? AND is_active = 1 ORDER BY price ASC');
 $stmt->execute([$category]);
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-?><!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Service Review & Product Selection</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f7f7f7; }
-        .container { max-width: 480px; margin: 0 auto; padding: 16px; background: #fff; min-height: 100vh; }
-        h1, h2 { text-align: center; }
-        .card { background: #f9f9f9; border-radius: 8px; padding: 16px; margin-bottom: 20px; box-shadow: 0 2px 8px #0001; }
-        .product-list { margin: 0; padding: 0; list-style: none; }
-        .product-item { display: flex; align-items: flex-start; gap: 12px; border-bottom: 1px solid #eee; padding: 12px 0; }
-        .product-item:last-child { border-bottom: none; }
-        .product-info { flex: 1; }
-        .product-name { font-weight: bold; }
-        .product-desc { font-size: 0.95em; color: #555; margin: 4px 0; }
-        .product-price { color: #1a8917; font-weight: bold; }
-        .total-bar { position: sticky; bottom: 0; background: #fff; padding: 16px 0 0 0; text-align: right; font-size: 1.2em; border-top: 1px solid #eee; }
-        .btn { display: block; width: 100%; background: #1a8917; color: #fff; border: none; border-radius: 6px; padding: 14px; font-size: 1.1em; margin-top: 12px; cursor: pointer; }
-        .btn:active { background: #166d13; }
-        @media (max-width: 600px) { .container { padding: 8px; } }
-    </style>
-</head>
-<body>
-<div class="container">
-    <h1>Review Your Details</h1>
-    <div class="card">
-        <h2>Submitted Information</h2>
-        <ul style="padding-left: 0; list-style: none;">
+?><main class="main-content">
+    <h1 class="review-title">Review &amp; Select Services</h1>
+    <div class="review-card">
+        <h2 class="section-title">Your Submitted Details</h2>
+        <div class="details-list">
             <?php foreach ($form_data as $key => $val): ?>
-                <li><strong><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $key))); ?>:</strong> <?php echo htmlspecialchars(is_array($val) ? implode(', ', $val) : $val); ?></li>
+                <div class="details-row">
+                    <span class="details-label"><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $key))); ?>:</span>
+                    <span class="details-value"><?php echo htmlspecialchars(is_array($val) ? implode(', ', $val) : $val); ?></span>
+                </div>
             <?php endforeach; ?>
-        </ul>
+        </div>
     </div>
-
-    <h2>Select Services</h2>
+    <h2 class="section-title">Select Services</h2>
     <?php if (!$products): ?>
-        <div class="card">No services available currently.</div>
+        <div class="review-card">No services available currently.</div>
     <?php else: ?>
-    <form id="productForm" method="post" action="payment.php">
-        <input type="hidden" name="request_id" value="<?php echo htmlspecialchars($request_id); ?>">
+    <form id="productForm" method="post" action="payment-init.php">
+        <input type="hidden" name="category" value="<?php echo htmlspecialchars($category); ?>">
+        <?php foreach ($form_data as $key => $val): ?>
+            <?php if (is_array($val)): ?>
+                <?php foreach ($val as $v): ?>
+                    <input type="hidden" name="<?php echo htmlspecialchars($key); ?>[]" value="<?php echo htmlspecialchars($v); ?>">
+                <?php endforeach; ?>
+            <?php else: ?>
+                <input type="hidden" name="<?php echo htmlspecialchars($key); ?>" value="<?php echo htmlspecialchars($val); ?>">
+            <?php endif; ?>
+        <?php endforeach; ?>
         <ul class="product-list">
             <?php foreach ($products as $product): ?>
             <li class="product-item">
-                <input type="checkbox" name="product_ids[]" value="<?php echo $product['id']; ?>" data-price="<?php echo $product['price']; ?>">
                 <div class="product-info">
-                    <div class="product-name"><?php echo htmlspecialchars($product['product_name']); ?></div>
-                    <div class="product-desc"><?php echo htmlspecialchars($product['short_description']); ?></div>
+                    <div style="display:flex;align-items:center;gap:14px;">
+                        <input type="checkbox" class="product-checkbox" name="product_ids[]" value="<?php echo $product['id']; ?>" data-price="<?php echo $product['price']; ?>" style="width:28px;height:28px;accent-color:#800000;cursor:pointer;">
+                        <div>
+                            <div class="product-name"><?php echo htmlspecialchars($product['product_name']); ?></div>
+                            <div class="product-desc"><?php echo htmlspecialchars($product['short_description']); ?></div>
+                        </div>
+                    </div>
                     <div class="product-price">₹<?php echo number_format($product['price'], 2); ?></div>
                 </div>
+                <div class="qty-controls">
+                    <button type="button" class="qty-btn" onclick="changeQty(this, -1)" disabled>−</button>
+                    <input type="number" class="qty-input" name="qty[<?php echo $product['id']; ?>]" value="1" min="1" max="99" readonly>
+                    <button type="button" class="qty-btn" onclick="changeQty(this, 1)" disabled>+</button>
+                </div>
+                <div class="line-total" id="line-total-<?php echo $product['id']; ?>">₹<?php echo number_format($product['price'], 2); ?></div>
             </li>
             <?php endforeach; ?>
         </ul>
-        <div class="total-bar">
+        <div class="sticky-total">
             Total: <span id="totalPrice">₹0.00</span>
         </div>
-        <button type="submit" class="btn">Proceed to Payment</button>
+        <button type="submit" class="pay-btn" id="payBtn" disabled>Make Payment</button>
     </form>
     <?php endif; ?>
-    <a href="services.php" style="display:block;text-align:center;margin-top:24px;color:#1a8917;">&larr; Back to Services</a>
-</div>
+    <a href="services.php" class="review-back-link">&larr; Back to Services</a>
+</main>
+<?php require_once 'footer.php'; ?>
 <script>
-// Step 6: Price calculation
-function updateTotal() {
+function updateTotals() {
     let total = 0;
-    document.querySelectorAll('input[type=checkbox][name="product_ids[]"]:checked').forEach(cb => {
-        total += parseFloat(cb.getAttribute('data-price'));
+    document.querySelectorAll('.product-item').forEach(function(row) {
+        const cb = row.querySelector('input[type=checkbox][name="product_ids[]"]');
+        const qtyInput = row.querySelector('.qty-input');
+        const price = parseFloat(cb.getAttribute('data-price'));
+        let qty = parseInt(qtyInput.value);
+        if (!cb.checked) qty = 0;
+        const lineTotal = price * qty;
+        row.querySelector('.line-total').textContent = '₹' + lineTotal.toFixed(2);
+        total += lineTotal;
+        qtyInput.disabled = !cb.checked;
+        row.querySelectorAll('.qty-btn').forEach(btn => btn.disabled = !cb.checked);
     });
     document.getElementById('totalPrice').textContent = '₹' + total.toFixed(2);
+    document.getElementById('payBtn').disabled = total === 0;
+}
+function changeQty(btn, delta) {
+    const row = btn.closest('.product-item');
+    const qtyInput = row.querySelector('.qty-input');
+    let qty = parseInt(qtyInput.value) + delta;
+    if (qty < 1) qty = 1;
+    if (qty > 99) qty = 99;
+    qtyInput.value = qty;
+    updateTotals();
 }
 document.querySelectorAll('input[type=checkbox][name="product_ids[]"]').forEach(cb => {
-    cb.addEventListener('change', updateTotal);
+    cb.addEventListener('change', updateTotals);
 });
-
-// Step 7: Validate selection before submit
+document.querySelectorAll('.qty-btn').forEach(btn => {
+    btn.addEventListener('click', function() { updateTotals(); });
+});
+window.onload = updateTotals;
 const form = document.getElementById('productForm');
 if (form) {
     form.addEventListener('submit', function(e) {
-        const checked = document.querySelectorAll('input[type=checkbox][name="product_ids[]"]:checked');
-        if (checked.length === 0) {
-            alert('Please select at least one service to proceed.');
+        if (document.getElementById('payBtn').disabled) {
             e.preventDefault();
+            alert('Please select at least one service to proceed.');
         }
     });
 }
+</script>
+<style>
+.main-content { max-width: 480px; margin: 0 auto; background: #fff; border-radius: 18px; box-shadow: 0 4px 24px #e0bebe33; padding: 18px 12px 28px 12px; }
+.review-title { font-size: 1.18em; font-weight: bold; margin-bottom: 18px; text-align: center; }
+.review-card { background: #f9eaea; border-radius: 14px; box-shadow: 0 2px 8px #e0bebe33; padding: 16px; margin-bottom: 18px; }
+.section-title { font-size: 1.05em; color: #800000; margin-bottom: 10px; font-weight: 600; }
+.details-list { display: flex; flex-direction: column; gap: 8px; }
+.details-row { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dashed #e0bebe; padding-bottom: 4px; }
+.details-label { color: #a03c3c; font-weight: 500; margin-right: 6px; }
+.details-value { color: #333; max-width: 60%; word-break: break-word; }
+.product-list { margin: 0; padding: 0; list-style: none; }
+.product-item { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f3caca; padding: 14px 0; }
+.product-item:last-child { border-bottom: none; }
+.product-info { flex: 1; }
+.product-checkbox { width: 28px; height: 28px; accent-color: #800000; cursor: pointer; }
+.product-name { font-weight: 600; color: #800000; font-size: 1.08em; }
+.product-desc { font-size: 0.97em; color: #555; margin: 2px 0 2px 0; }
+.product-price { color: #1a8917; font-weight: 600; font-size: 1.08em; margin-top: 6px; }
+.qty-controls { display: flex; align-items: center; gap: 4px; }
+.qty-btn { background: #f5faff; border: 1px solid #e0bebe; color: #800000; border-radius: 50%; width: 22px; height: 22px; font-size: 1em; cursor: pointer; }
+.qty-input { width: 32px; text-align: center; border: 1px solid #e0bebe; border-radius: 6px; padding: 2px 0; font-size: 1em; }
+.line-total { font-size: 0.98em; color: #800000; font-weight: 600; min-width: 60px; text-align: right; }
+.sticky-total { position: sticky; bottom: 0; background: #fff; padding: 14px 0 0 0; text-align: right; font-size: 1.13em; border-top: 1px solid #e0bebe; box-shadow: 0 -2px 8px #e0bebe22; z-index: 10; }
+.pay-btn { width: 100%; background: #800000; color: #fff; border: none; border-radius: 8px; padding: 14px 0; font-size: 1.08em; font-weight: 600; margin-top: 10px; cursor: pointer; box-shadow: 0 2px 8px #80000022; transition: background 0.15s; }
+.pay-btn:disabled { background: #ccc; color: #fff; cursor: not-allowed; }
+.review-back-link { display:block;text-align:center;margin-top:18px;color:#1a8917;font-size:0.98em;text-decoration:none; }
+@media (max-width: 700px) { .main-content { padding: 8px 2px 16px 2px; border-radius: 0; } }
+</style>
 </script>
 </body>
 </html>
