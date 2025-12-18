@@ -1,0 +1,145 @@
+<?php include 'header.php'; 
+
+// Get service from URL parameter
+$service = isset($_GET['service']) ? $_GET['service'] : 'general';
+
+// Service data mapping
+$services = [
+    'astrology-reports' => [
+        'title' => 'ज्योतिष रिपोर्ट',
+        'icon' => '📊',
+        'description' => 'आपकी व्यक्तिगत कुंडली का विस्तृत विश्लेषण। हमारे अनुभवी ज्योतिषी आपके भाग्य, व्यक्तित्व, और भविष्य के बारे में संपूर्ण जानकारी प्रदान करते हैं।',
+        'deliveryMode' => 'PDF Report & Consultation Call',
+        'timeRequired' => '5-7 दिन'
+    ],
+    'marriage-matching' => [
+        'title' => 'विवाह मिलान',
+        'icon' => '💍',
+        'description' => 'दो कुंडलियों की संगति की जांच करें। विवाह के लिए सर्वश्रेष्ठ मुहूर्त और संभावित समस्याओं का समाधान।',
+        'deliveryMode' => 'Detailed Report & Remedies',
+        'timeRequired' => '3-5 दिन'
+    ],
+    'consultations' => [
+        'title' => 'परामर्श सेवा',
+        'icon' => '🗣️',
+        'description' => 'आध्यात्मिक विशेषज्ञों से सीधे परामर्श लें। व्यक्तिगत, व्यावसायिक, या पारिवारिक समस्याओं का समाधान।',
+        'deliveryMode' => 'Video/Phone Consultation',
+        'timeRequired' => '1-2 घंटे'
+    ],
+    'vastu-services' => [
+        'title' => 'वास्तु सेवा',
+        'icon' => '🏠',
+        'description' => 'आपके घर या व्यापार के लिए वास्तु सुझाव। ऊर्जा प्रवाह को सुधारें और सकारात्मकता बढ़ाएं।',
+        'deliveryMode' => 'Site Visit & Written Report',
+        'timeRequired' => '7-10 दिन'
+    ],
+    'pooja-homa' => [
+        'title' => 'पूजा और होम',
+        'icon' => '🔥',
+        'description' => 'विभिन्न देवताओं के लिए धार्मिक अनुष्ठान और होम। प्रत्येक अनुष्ठान विशेष मंत्रों और विधियों के साथ किया जाता है।',
+        'deliveryMode' => 'Live/Video Ceremony',
+        'timeRequired' => 'विधि के अनुसार 2-6 घंटे'
+    ],
+    'sanskars' => [
+        'title' => 'संस्कार सेवा',
+        'icon' => '🎊',
+        'description' => 'जीवन के महत्वपूर्ण मोमेंट्स - जन्म, विवाह, मृत्यु आदि के लिए संस्कार संपन्न करना।',
+        'deliveryMode' => 'On-site Ceremony',
+        'timeRequired' => 'विधि के अनुसार'
+    ],
+    'yantra-pratishtha' => [
+        'title' => 'यंत्र प्रतिष्ठा',
+        'icon' => '✨',
+        'description' => 'शक्तिशाली यंत्रों की प्रतिष्ठा और सक्रियकरण। मनोवांछित फल प्राप्ति के लिए यंत्र का सही उपयोग।',
+        'deliveryMode' => 'Physical Yantra + Ritual',
+        'timeRequired' => '2-3 दिन'
+    ],
+    'muhurat' => [
+        'title' => 'मुहूर्त निर्धारण',
+        'icon' => '⏰',
+        'description' => 'महत्वपूर्ण कार्यों के लिए शुभ समय निर्धारण। विवाह, नए व्यापार की शुरुआत, या किसी भी महत्वपूर्ण कार्य के लिए।',
+        'deliveryMode' => 'Detailed Calendar & Analysis',
+        'timeRequired' => '1-2 दिन'
+    ]
+];
+
+// Get service data or use default
+$serviceData = isset($services[$service]) ? $services[$service] : [
+    'title' => 'सेवा विवरण',
+    'icon' => '🕉️',
+    'description' => 'सेवा का विस्तृत विवरण यहां प्रदर्शित किया जाएगा।',
+    'deliveryMode' => 'To be determined',
+    'timeRequired' => 'To be determined'
+];
+?>
+
+<main class="main-content">
+    <!-- Service Detail Header -->
+    <section class="detail-header">
+        <div class="detail-icon-large">
+            <?php echo $serviceData['icon']; ?>
+        </div>
+        <h1 class="detail-title"><?php echo $serviceData['title']; ?></h1>
+    </section>
+
+    <!-- Service Description -->
+    <section class="detail-section">
+        <h3>सेवा विवरण</h3>
+        <p class="detail-description">
+            <?php echo $serviceData['description']; ?>
+        </p>
+    </section>
+
+    <!-- Service Details Grid -->
+    <section class="detail-info-grid">
+        <div class="info-card">
+            <div class="info-label">डिलीवरी मोड</div>
+            <div class="info-value"><?php echo $serviceData['deliveryMode']; ?></div>
+        </div>
+        <div class="info-card">
+            <div class="info-label">समय आवश्यकता</div>
+            <div class="info-value"><?php echo $serviceData['timeRequired']; ?></div>
+        </div>
+    </section>
+
+    <!-- Procedure Section -->
+    <section class="detail-section">
+        <h3>प्रक्रिया</h3>
+        <div class="process-steps">
+            <div class="step">
+                <span class="step-number">1</span>
+                <p class="step-text">विवरण भरें</p>
+            </div>
+            <div class="step">
+                <span class="step-number">2</span>
+                <p class="step-text">पुष्टि करें</p>
+            </div>
+            <div class="step">
+                <span class="step-number">3</span>
+                <p class="step-text">भुगतान करें</p>
+            </div>
+            <div class="step">
+                <span class="step-number">4</span>
+                <p class="step-text">सेवा प्राप्त करें</p>
+            </div>
+        </div>
+    </section>
+    <!-- Proceed Button -->
+    <section class="detail-section" style="text-align:center;">
+        <button class="proceed-btn" id="proceedBtn">आगे बढ़ें</button>
+    </section>
+</main>
+
+<script>
+document.getElementById('proceedBtn').onclick = function() {
+    var service = '<?php echo $service; ?>';
+    if (service === 'marriage-matching') {
+        window.location.href = 'forms/kundali-milan.php';
+    } else {
+        // Placeholder for other services
+        window.location.href = '#';
+    }
+};
+</script>
+
+<?php include 'footer.php'; ?>
