@@ -1,3 +1,7 @@
+
+
+<style>
+
 .status-row {
     display: flex;
     flex-wrap: wrap;
@@ -26,6 +30,73 @@
         padding: 10px 0;
     }
 }
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    margin-bottom: 18px;
+}
+.track-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 700px;
+    background: #fff;
+    box-shadow: 0 2px 12px #e0bebe22;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.track-table th, .track-table td {
+    padding: 12px 10px;
+    text-align: left;
+    border-bottom: 1px solid #f3caca;
+    font-size: 1.04em;
+}
+.track-table th {
+    background: #f9eaea;
+    color: #800000;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+.track-table tr:last-child td {
+    border-bottom: none;
+}
+.status-badge {
+    padding: 2px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.98em;
+    background: #f7e7e7;
+    color: #800000;
+    display: inline-block;
+}
+.status-badge.status-paid { background: #e5ffe5; color: #1a8917; }
+.status-badge.status-received { background: #e5f0ff; color: #0056b3; }
+.download-btn {
+    background: #800000;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 0.98em;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    box-shadow: 0 2px 8px #80000022;
+    transition: background 0.15s;
+    display: inline-block;
+}
+.download-btn:active { background: #5a0000; }
+@media (max-width: 700px) {
+    .track-table th, .track-table td {
+        padding: 10px 6px;
+        font-size: 0.97em;
+    }
+    .track-table {
+        min-width: 600px;
+    }
+}
+</style>
+
 
 <?php
 require_once 'header.php';
@@ -97,7 +168,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php foreach ($results as $row): ?>
                         <tr>
                             <td><?php echo htmlspecialchars($row['tracking_id']); ?></td>
-                            <td><?php echo htmlspecialchars($row['category_slug']); ?></td>
+                            <td><?php
+                                $categoryTitles = [
+                                    'birth-child' => 'Birth & Child Services',
+                                    'marriage-matching' => 'Marriage & Matching',
+                                    'astrology-consultation' => 'Astrology Consultation',
+                                    'muhurat-event' => 'Muhurat & Event Guidance',
+                                    'pooja-vastu-enquiry' => 'Pooja, Ritual & Vastu Enquiry',
+                                ];
+                                $cat = $row['category_slug'];
+                                echo isset($categoryTitles[$cat]) ? $categoryTitles[$cat] : htmlspecialchars($cat);
+                            ?></td>
                             <td><?php echo date('d-m-Y', strtotime($row['created_at'])); ?></td>
                             <td>₹<?php echo number_format($row['total_amount'], 2); ?></td>
                             <td><span class="status-badge status-<?php echo strtolower($row['payment_status']); ?>"><?php echo htmlspecialchars($row['payment_status']); ?></span></td>
@@ -114,69 +195,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </main>
 
 <?php include 'footer.php'; ?>
-</style>
-.table-responsive {
-    width: 100%;
-    overflow-x: auto;
-    margin-bottom: 18px;
-}
-.track-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 700px;
-    background: #fff;
-    box-shadow: 0 2px 12px #e0bebe22;
-    border-radius: 12px;
-    overflow: hidden;
-}
-.track-table th, .track-table td {
-    padding: 12px 10px;
-    text-align: left;
-    border-bottom: 1px solid #f3caca;
-    font-size: 1.04em;
-}
-.track-table th {
-    background: #f9eaea;
-    color: #800000;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-}
-.track-table tr:last-child td {
-    border-bottom: none;
-}
-.status-badge {
-    padding: 2px 12px;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.98em;
-    background: #f7e7e7;
-    color: #800000;
-    display: inline-block;
-}
-.status-badge.status-paid { background: #e5ffe5; color: #1a8917; }
-.status-badge.status-received { background: #e5f0ff; color: #0056b3; }
-.download-btn {
-    background: #800000;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    padding: 8px 16px;
-    font-size: 0.98em;
-    font-weight: 600;
-    text-align: center;
-    text-decoration: none;
-    box-shadow: 0 2px 8px #80000022;
-    transition: background 0.15s;
-    display: inline-block;
-}
-.download-btn:active { background: #5a0000; }
-@media (max-width: 700px) {
-    .track-table th, .track-table td {
-        padding: 10px 6px;
-        font-size: 0.97em;
-    }
-    .track-table {
-        min-width: 600px;
-    }
-}
-</style>
