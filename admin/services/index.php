@@ -37,14 +37,11 @@ function debounce(fn, delay) {
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('.filter-bar');
     const searchInput = form.querySelector('input[name="search"]');
-    const tableBody = document.querySelector('.service-table tbody');
+    const tableBody = document.getElementById('serviceTableBody');
 
     // AJAX load function
     function loadTable(params) {
-        const url = new URL('admin/services/ajax_list.php', window.location.origin);
-        for (const [k, v] of Object.entries(params)) {
-            if (v !== undefined && v !== null) url.searchParams.set(k, v);
-        }
+        const url = 'ajax_list.php?' + new URLSearchParams(params).toString();
         fetch(url)
             .then(r => r.text())
             .then(html => {
@@ -68,14 +65,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     searchInput.addEventListener('input', debouncedSearch);
 
-    // AJAX pagination
+    // AJAX pagination using data-page
     function attachPaginationLinks() {
-        tableBody.querySelectorAll('.pagination .page-link').forEach(link => {
+        tableBody.querySelectorAll('.pagination .page-link[data-page]').forEach(link => {
             if (link.classList.contains('disabled') || link.classList.contains('current')) return;
             link.addEventListener('click', function(e) {
                 e.preventDefault();
-                const url = new URL(link.href, window.location.origin);
-                const page = url.searchParams.get('page') || 1;
+                const page = link.getAttribute('data-page') || 1;
                 loadTable(getParams(page));
             });
         });
@@ -392,7 +388,7 @@ h1 {
     <th>Action</th>
 </tr>
 </thead>
-<tbody>
+<tbody id="serviceTableBody">
 <?php if (!$requests): ?>
 <tr>
     <td colspan="10" class="no-data">No service requests found.</td>
@@ -473,7 +469,7 @@ h1 {
 
         // Previous
         if ($page > 1) {
-            echo '<a href="' . htmlspecialchars($linkBase . ($page - 1)) . '" class="page-link">&laquo; Previous</a> ';
+            echo '<a href="' . htmlspecialchars($linkBase . ($page - 1)) . '" class="page-link" data-page="' . ($page - 1) . '">&laquo; Previous</a> ';
         } else {
             echo '<span class="page-link disabled">&laquo; Previous</span> ';
         }
@@ -483,13 +479,13 @@ h1 {
             if ($i == $page) {
                 echo '<span class="page-link current">' . $i . '</span> ';
             } else {
-                echo '<a href="' . htmlspecialchars($linkBase . $i) . '" class="page-link">' . $i . '</a> ';
+                echo '<a href="' . htmlspecialchars($linkBase . $i) . '" class="page-link" data-page="' . $i . '">' . $i . '</a> ';
             }
         }
 
         // Next
         if ($page < $totalPages) {
-            echo '<a href="' . htmlspecialchars($linkBase . ($page + 1)) . '" class="page-link">Next &raquo;</a>';
+            echo '<a href="' . htmlspecialchars($linkBase . ($page + 1)) . '" class="page-link" data-page="' . ($page + 1) . '">Next &raquo;</a>';
         } else {
             echo '<span class="page-link disabled">Next &raquo;</span>';
         }
