@@ -219,6 +219,46 @@ if (!empty($request['uploaded_files'])) {
             <div style="color:#888;font-size:0.98em;margin-bottom:18px;">No form data submitted.</div>
         <?php endif; ?>
 
+            <!-- Products Chosen Section -->
+            <h2 style="font-size:1.1em;color:#800000;margin:18px 0 8px 0;">Products Chosen</h2>
+            <?php
+            $products = [];
+            if (!empty($request['selected_products'])) {
+                $products = json_decode($request['selected_products'], true);
+            }
+            if ($products && is_array($products) && count($products) > 0): ?>
+                <table class="details-table" style="margin-bottom:18px;">
+                    <tr>
+                        <th>Product Name</th>
+                        <th>Quantity</th>
+                        <th>Price (₹)</th>
+                        <th>Subtotal (₹)</th>
+                    </tr>
+                    <?php
+                    $grandTotal = 0;
+                    foreach ($products as $prod):
+                        $name = isset($prod['name']) ? $prod['name'] : (isset($prod['product_name']) ? $prod['product_name'] : '');
+                        $qty = isset($prod['qty']) ? (int)$prod['qty'] : 1;
+                        $price = isset($prod['price']) ? (float)$prod['price'] : 0;
+                        $subtotal = $qty * $price;
+                        $grandTotal += $subtotal;
+                    ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($name); ?></td>
+                        <td><?php echo htmlspecialchars($qty); ?></td>
+                        <td>₹<?php echo number_format($price, 2); ?></td>
+                        <td>₹<?php echo number_format($subtotal, 2); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                    <tr>
+                        <th colspan="3" style="text-align:right;">Total Amount</th>
+                        <th>₹<?php echo number_format($grandTotal, 2); ?></th>
+                    </tr>
+                </table>
+            <?php else: ?>
+                <div style="color:#888;font-size:0.98em;margin-bottom:18px;">No products selected.</div>
+            <?php endif; ?>
+
         <h2 style="font-size:1.1em;color:#800000;margin:18px 0 8px 0;">Upload Service Files</h2>
         <?php if (!empty($uploadMsg)): ?><div class="success-msg"><?php echo $uploadMsg; ?></div><?php endif; ?>
         <form method="post" enctype="multipart/form-data" style="margin-bottom:18px;">

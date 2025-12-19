@@ -102,7 +102,7 @@ if ($existing && !empty($existing['tracking_id'])) {
         ");
         $stmt->execute([
             ':tracking_id'       => $tracking_id,
-            ':category_slug'     => $category_slug,
+            ':category_slug'     => $category,
             ':customer_name'     => $customerName,
             ':mobile'            => $mobile,
             ':email'             => $email,
@@ -129,7 +129,7 @@ if ($existing && !empty($existing['tracking_id'])) {
             $trackingId,
             $customerName,
             $mobile,
-            $category_slug,
+            $category,
             'Received'
         ]);
 }
