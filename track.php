@@ -183,7 +183,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <td>₹<?php echo number_format($row['total_amount'], 2); ?></td>
                             <td><span class="status-badge status-<?php echo strtolower($row['payment_status']); ?>"><?php echo htmlspecialchars($row['payment_status']); ?></span></td>
                             <td><span class="status-badge status-<?php echo strtolower($row['service_status']); ?>"><?php echo htmlspecialchars($row['service_status']); ?></span></td>
-                            <td><a href="#" class="pay-btn download-btn">Download</a></td>
+                            <td>
+                                <div style="min-width:180px;">
+                                    <div style="font-weight:600;color:#800000;margin-bottom:4px;">Service Files / Reports</div>
+                                    <?php
+                                    // Fetch uploaded_files
+                                    $files = [];
+                                    if (!empty($row['tracking_id'])) {
+                                        $stmtFiles = $pdo->prepare('SELECT uploaded_files FROM service_requests WHERE tracking_id = ?');
+                                        $stmtFiles->execute([$row['tracking_id']]);
+                                        $uf = $stmtFiles->fetchColumn();
+                                        if ($uf) {
+                                            $files = json_decode($uf, true) ?: [];
+                                        }
+                                    }
+                                    if ($files && count($files) > 0): ?>
+                                        <ul style="list-style:none;padding:0;margin:0;">
+                                        <?php foreach ($files as $file): ?>
+                                            <li style="margin-bottom:6px;">
+                                                <span style="font-size:0.98em;"><?php echo htmlspecialchars($file['name']); ?></span>
+                                                <a href="download.php?tracking_id=<?php echo urlencode($row['tracking_id']); ?>&file=<?php echo urlencode($file['file']); ?>" class="download-btn" style="margin-left:8px;">Download</a>
+                                            </li>
+                                        <?php endforeach; ?>
+                                        </ul>
+                                    <?php else: ?>
+                                        <span style="color:#888;font-size:0.97em;">Files will be available once the service is completed.</span>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>

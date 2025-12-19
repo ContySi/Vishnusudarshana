@@ -1,16 +1,30 @@
 <?php
 require_once __DIR__ . '/../../config/db.php';
 
-// Service Status Filter
+// Service Status & Category Filter
 $statusOptions = ['All', 'Received', 'In Progress', 'Completed'];
+$categoryOptions = [
+    'All' => 'All Categories',
+    'birth-child' => 'Birth & Child Services',
+    'marriage-matching' => 'Marriage & Matching',
+    'astrology-consultation' => 'Astrology Consultation',
+    'muhurat-event' => 'Muhurat & Event Guidance',
+    'pooja-vastu-enquiry' => 'Pooja, Ritual & Vastu Enquiry',
+];
 $selectedStatus = $_GET['status'] ?? 'All';
-$where = '';
+$selectedCategory = $_GET['category'] ?? 'All';
+$where = [];
 $params = [];
 if ($selectedStatus !== 'All') {
-    $where = 'WHERE service_status = ?';
+    $where[] = 'service_status = ?';
     $params[] = $selectedStatus;
 }
-$sql = "SELECT id, tracking_id, customer_name, mobile, category_slug, total_amount, payment_status, service_status, created_at FROM service_requests $where ORDER BY created_at DESC";
+if ($selectedCategory !== 'All') {
+    $where[] = 'category_slug = ?';
+    $params[] = $selectedCategory;
+}
+$whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
+$sql = "SELECT id, tracking_id, customer_name, mobile, category_slug, total_amount, payment_status, service_status, created_at FROM service_requests $whereSql ORDER BY created_at DESC";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -49,13 +63,20 @@ $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
 <div class="admin-container">
     <h1>Service Requests</h1>
-    <form class="filter-bar" method="get">
+    <form class="filter-bar" method="get" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+        <label for="category">Category:</label>
+        <select name="category" id="category" style="min-width:180px;" onchange="this.form.submit()">
+            <?php foreach ($categoryOptions as $key => $label): ?>
+                <option value="<?php echo $key; ?>" <?php if ($selectedCategory === $key) echo 'selected'; ?>><?php echo $label; ?></option>
+            <?php endforeach; ?>
+        </select>
         <label for="status">Service Status:</label>
-        <select name="status" id="status" onchange="this.form.submit()">
+        <select name="status" id="status" style="min-width:140px;" onchange="this.form.submit()">
             <?php foreach ($statusOptions as $opt): ?>
                 <option value="<?php echo $opt; ?>" <?php if ($selectedStatus === $opt) echo 'selected'; ?>><?php echo $opt; ?></option>
             <?php endforeach; ?>
         </select>
+        <button type="submit" style="background:#800000;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:0.98em;font-weight:600;cursor:pointer;">Apply Filter</button>
     </form>
     <div class="table-responsive">
         <table class="service-table">

@@ -16,7 +16,6 @@ if (!$request) {
     exit;
 }
 
-// Handle status update
 $statusOptions = ['Received', 'In Progress', 'Completed'];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['service_status'])) {
     $newStatus = $_POST['service_status'];
@@ -31,6 +30,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['service_status'])) {
         $request['service_status'] = $newStatus;
         $successMsg = 'Service status updated.';
     }
+}
+// Handle file upload
+$uploadMsg = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_files']) && !empty($_FILES['service_files']['name'][0])) {
+    $trackingId = $request['tracking_id'];
+    $uploadDir = __DIR__ . '/../../uploads/services/' . $trackingId . '/';
+
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+    $allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    $meta = [];
+    foreach ($_FILES['service_files']['name'] as $i => $name) {
+        $tmpName = $_FILES['service_files']['tmp_name'][$i];
+        $type = $_FILES['service_files']['type'][$i];
+        $error = $_FILES['service_files']['error'][$i];
+        if ($error === UPLOAD_ERR_OK && in_array($type, $allowedTypes)) {
+            $ext = pathinfo($name, PATHINFO_EXTENSION);
+            $safeName = uniqid('file_') . '.' . $ext;
+            $dest = $uploadDir . $safeName;
+            if (move_uploaded_file($tmpName, $dest)) {
+                $meta[] = [
+                    'name' => $name,
+                    'file' => $safeName,
+                    'date' => date('Y-m-d H:i:s'),
+                    'type' => $type
+                ];
+            }
+        }
+    }
+    // Append to existing uploaded_files JSON
+    $existing = [];
+    if (!empty($request['uploaded_files'])) {
+        $existing = json_decode($request['uploaded_files'], true) ?: [];
+    }
+    $allFiles = array_merge($existing, $meta);
+    $stmt = $pdo->prepare('UPDATE service_requests SET uploaded_files = ? WHERE id = ?');
+    $stmt->execute([json_encode($allFiles), $id]);
+    $request['uploaded_files'] = json_encode($allFiles);
+    $uploadMsg = count($meta) . ' file(s) uploaded.';
+}
+// Decode form data
+$formData = [];
+if (!empty($request['form_data'])) {
+    $formData = json_decode($request['form_data'], true);
+}
+
+// Handle file removal
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['remove_file']) && isset($_POST['file_name'])) {
+    $fileToRemove = $_POST['file_name'];
+    $trackingId = $request['tracking_id'];
+    $uploadDir = __DIR__ . '/../../uploads/services/' . $trackingId . '/';
+    $uploadedFiles = [];
+    if (!empty($request['uploaded_files'])) {
+        $uploadedFiles = json_decode($request['uploaded_files'], true) ?: [];
+    }
+    $updatedFiles = [];
+    foreach ($uploadedFiles as $file) {
+        if ($file['file'] === $fileToRemove) {
+            $filePath = $uploadDir . $file['file'];
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+            continue; // skip this file
+        }
+        $updatedFiles[] = $file;
+    }
+    // Update DB
+    $stmt = $pdo->prepare('UPDATE service_requests SET uploaded_files = ? WHERE id = ?');
+    $stmt->execute([json_encode($updatedFiles), $id]);
+    // Redirect to reload updated data
+    header('Location: view.php?id=' . urlencode($id) . '&msg=removed');
+    exit;
+}
+// Decode uploaded files
+$uploadedFiles = [];
+if (!empty($request['uploaded_files'])) {
+    $uploadedFiles = json_decode($request['uploaded_files'], true) ?: [];
 }
 ?>
 <!DOCTYPE html>
@@ -89,6 +166,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['service_status'])) {
         <tr><th>Service Status</th><td><span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $request['service_status'])); ?>"><?php echo htmlspecialchars($request['service_status']); ?></span></td></tr>
         <tr><th>Created Date</th><td><?php echo date('d-m-Y', strtotime($request['created_at'])); ?></td></tr>
     </table>
+        <h2 style="font-size:1.1em;color:#800000;margin:18px 0 8px 0;">Customer Submitted Details</h2>
+        <?php if ($formData): ?>
+        <?php
+        // Standard field order and icons
+        $fieldOrder = [
+            'dob' => ['label' => 'Date of Birth', 'icon' => '📅'],
+            'time_of_birth' => ['label' => 'Time of Birth', 'icon' => '⏰'],
+            'place_of_birth' => ['label' => 'Place of Birth', 'icon' => '📍'],
+            'father_name' => ['label' => "Father's Name", 'icon' => '👨'],
+            'mother_name' => ['label' => "Mother's Name", 'icon' => '👩'],
+            'spouse_name' => ['label' => "Spouse's Name", 'icon' => '💍'],
+            'child_name' => ['label' => "Child's Name", 'icon' => '👶'],
+            'query' => ['label' => 'Query/Details', 'icon' => '📝'],
+            'gender' => ['label' => 'Gender', 'icon' => '⚧'],
+            'occupation' => ['label' => 'Occupation', 'icon' => '💼'],
+            'address' => ['label' => 'Address', 'icon' => '🏠'],
+            'state' => ['label' => 'State', 'icon' => '🏞️'],
+            'country' => ['label' => 'Country', 'icon' => '🌏'],
+            'notes' => ['label' => 'Notes', 'icon' => '🗒️'],
+        ];
+        $skipFields = ['product_ids', 'qty', 'mobile', 'email', 'category', 'category_slug', 'full_name', 'name', 'city'];
+        $shownLabels = [];
+        ?>
+        <table class="details-table" style="margin-bottom:18px;">
+
+        <?php
+        // Show standard fields in order
+        foreach ($fieldOrder as $key => $meta):
+            if (isset($formData[$key]) && !in_array($key, $skipFields)) {
+                $shownLabels[] = strtolower($key);
+        ?>
+            <tr>
+                <th><?php echo $meta['icon'] . ' ' . htmlspecialchars($meta['label']); ?></th>
+                <td><?php echo is_array($formData[$key]) ? implode(', ', array_map('htmlspecialchars', $formData[$key])) : htmlspecialchars($formData[$key]); ?></td>
+            </tr>
+        <?php
+            }
+        endforeach;
+        // Show remaining fields
+        foreach ($formData as $label => $value):
+            $labelLower = strtolower($label);
+            if (in_array($labelLower, $skipFields) || in_array($labelLower, $shownLabels)) continue;
+        ?>
+            <tr>
+                <th><?php echo htmlspecialchars(ucwords(str_replace(['_', '-'], ' ', $label))); ?></th>
+                <td><?php echo is_array($value) ? implode(', ', array_map('htmlspecialchars', $value)) : htmlspecialchars($value); ?></td>
+            </tr>
+        <?php endforeach; ?>
+        </table>
+        <?php else: ?>
+            <div style="color:#888;font-size:0.98em;margin-bottom:18px;">No form data submitted.</div>
+        <?php endif; ?>
+
+        <h2 style="font-size:1.1em;color:#800000;margin:18px 0 8px 0;">Upload Service Files</h2>
+        <?php if (!empty($uploadMsg)): ?><div class="success-msg"><?php echo $uploadMsg; ?></div><?php endif; ?>
+        <form method="post" enctype="multipart/form-data" style="margin-bottom:18px;">
+            <input type="file" name="service_files[]" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="margin-bottom:8px;">
+            <button type="submit" name="upload_files">Upload Files</button>
+        </form>
+        <h3 style="font-size:1em;color:#800000;margin:10px 0 6px 0;">Uploaded Files</h3>
+            <?php if ($uploadedFiles): ?>
+            <table class="details-table" style="margin-bottom:18px;">
+                <tr><th>File Name</th><th>Download</th><th>Upload Date</th><th>Action</th></tr>
+                <?php foreach ($uploadedFiles as $file): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($file['name']); ?></td>
+                        <td><a href="../../uploads/services/<?php echo htmlspecialchars($request['tracking_id']); ?>/<?php echo htmlspecialchars($file['file']); ?>" target="_blank" style="color:#800000;text-decoration:underline;">Download</a></td>
+                        <td><?php echo date('d-m-Y H:i', strtotime($file['date'])); ?></td>
+                        <td>
+                            <form method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this file?');">
+                                <input type="hidden" name="file_name" value="<?php echo htmlspecialchars($file['file']); ?>">
+                                <button type="submit" name="remove_file" style="background:#c00;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:0.95em;cursor:pointer;">Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
+            <?php else: ?>
+                <div style="color:#888;font-size:0.98em;margin-bottom:18px;">No files uploaded yet.</div>
+            <?php endif; ?>
     <form class="form-bar" method="post">
         <label for="service_status">Update Service Status:</label>
         <select name="service_status" id="service_status">

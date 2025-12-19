@@ -54,6 +54,7 @@ if ($total_amount <= 0) {
 $_SESSION['pending_payment'] = [
     'category' => $category,
     'customer_details' => $form_data,
+    'form_data' => $form_data, // Ensure full form data is available for DB
     'products' => $selected_products,
     'total_amount' => $total_amount
 ];

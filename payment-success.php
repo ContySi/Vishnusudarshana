@@ -62,7 +62,7 @@ $customerName = $customer['full_name'] ?? '';
 $mobile = $customer['mobile'] ?? '';
 $email = $customer['email'] ?? '';
 $city = $customer['city'] ?? '';
-$formData = $customer;
+$formData = $pending['form_data'] ?? $customer;
 $selectedProducts = $products;
 $paymentId = $payment_id;
 
