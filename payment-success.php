@@ -38,8 +38,6 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS tracking (
     service_status VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );");
-// If old column exists, rename
-$pdo->exec("ALTER TABLE service_requests CHANGE category category_slug VARCHAR(50)");
 
 // Step 4: Generate tracking ID
 $date = date('Ymd');
@@ -104,7 +102,7 @@ if ($existing && !empty($existing['tracking_id'])) {
         ");
         $stmt->execute([
             ':tracking_id'       => $tracking_id,
-            ':category_slug'     => $category,
+            ':category_slug'     => $category_slug,
             ':customer_name'     => $customerName,
             ':mobile'            => $mobile,
             ':email'             => $email,
@@ -131,7 +129,7 @@ if ($existing && !empty($existing['tracking_id'])) {
             $trackingId,
             $customerName,
             $mobile,
-            $category,
+            $category_slug,
             'Received'
         ]);
 }
