@@ -1,3 +1,103 @@
+</style>
+<style>
+.pagination .page-link {
+    display: inline-block;
+    margin: 0 3px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: #f9eaea;
+    color: #800000;
+    text-decoration: none;
+    font-weight: 600;
+    border: 1px solid #f3caca;
+    min-width: 32px;
+}
+.pagination .page-link.current {
+    background: #800000;
+    color: #fff;
+    border: 1px solid #800000;
+}
+.pagination .page-link.disabled {
+    background: #f7f7fa;
+    color: #bbb;
+    border: 1px solid #eee;
+    cursor: not-allowed;
+}
+</style>
+<script>
+// Debounce helper
+function debounce(fn, delay) {
+    let timer = null;
+    return function(...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('.filter-bar');
+    const searchInput = form.querySelector('input[name="search"]');
+    const tableBody = document.querySelector('.service-table tbody');
+
+    // AJAX load function
+    function loadTable(params) {
+        const url = new URL('admin/services/ajax_list.php', window.location.origin);
+        for (const [k, v] of Object.entries(params)) {
+            if (v !== undefined && v !== null) url.searchParams.set(k, v);
+        }
+        fetch(url)
+            .then(r => r.text())
+            .then(html => {
+                tableBody.innerHTML = html;
+                attachPaginationLinks();
+            });
+    }
+
+    // Gather current filter/search/page params
+    function getParams(pageOverride) {
+        const fd = new FormData(form);
+        const params = Object.fromEntries(fd.entries());
+        if (pageOverride) params.page = pageOverride;
+        return params;
+    }
+
+    // Debounced search
+    const debouncedSearch = debounce(function() {
+        loadTable(getParams(1));
+    }, 300);
+
+    searchInput.addEventListener('input', debouncedSearch);
+
+    // AJAX pagination
+    function attachPaginationLinks() {
+        tableBody.querySelectorAll('.pagination .page-link').forEach(link => {
+            if (link.classList.contains('disabled') || link.classList.contains('current')) return;
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const url = new URL(link.href, window.location.origin);
+                const page = url.searchParams.get('page') || 1;
+                loadTable(getParams(page));
+            });
+        });
+    }
+
+    // Initial attach for first page
+    attachPaginationLinks();
+
+    // AJAX for filter change (category/status)
+    form.querySelectorAll('select').forEach(sel => {
+        sel.addEventListener('change', function() {
+            loadTable(getParams(1));
+        });
+    });
+
+    // AJAX for form submit (button)
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        loadTable(getParams(1));
+    });
+});
+</script>
 <?php
 require_once __DIR__ . '/../../config/db.php';
 
@@ -33,11 +133,20 @@ $categoryOptions = [
     'pooja-vastu-enquiry' => 'Pooja, Ritual & Vastu Enquiry',
 ];
 
+
 $selectedStatus   = $_GET['status']   ?? 'All';
 $selectedCategory = $_GET['category'] ?? 'All';
+$search           = trim($_GET['search'] ?? '');
+
 
 $where  = [];
 $params = [];
+
+// Pagination setup
+$perPage = 10;
+$page = isset($_GET['page']) && is_numeric($_GET['page']) && $_GET['page'] > 0 ? (int)$_GET['page'] : 1;
+$offset = ($page - 1) * $perPage;
+
 
 if ($selectedStatus !== 'All') {
     $where[]  = 'service_status = ?';
@@ -47,15 +156,30 @@ if ($selectedCategory !== 'All') {
     $where[]  = 'category_slug = ?';
     $params[] = $selectedCategory;
 }
+if ($search !== '') {
+    $where[] = '(tracking_id LIKE ? OR mobile LIKE ? OR customer_name LIKE ?)';
+    $params[] = "%$search%";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
+}
 
 $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
+// Get total count for pagination
+$countSql = "SELECT COUNT(*) FROM service_requests $whereSql";
+$countStmt = $pdo->prepare($countSql);
+$countStmt->execute($params);
+$totalRecords = $countStmt->fetchColumn();
+$totalPages = max(1, ceil($totalRecords / $perPage));
+
+// Main paginated query
 $sql = "
     SELECT id, tracking_id, customer_name, mobile, category_slug,
-           total_amount, payment_status, service_status, created_at
+           total_amount, payment_status, service_status, created_at, selected_products
     FROM service_requests
     $whereSql
     ORDER BY created_at DESC
+    LIMIT $perPage OFFSET $offset
 ";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
@@ -132,6 +256,7 @@ h1 {
     cursor: pointer;
 }
 
+
 /* TABLE */
 .service-table {
     width: 100%;
@@ -151,15 +276,28 @@ h1 {
     background: #f9eaea;
     color: #800000;
 }
+.service-table tbody tr:hover {
+    background: #f3f7fa;
+    cursor: pointer;
+}
 .status-badge {
     padding: 4px 12px;
     border-radius: 8px;
     font-weight: 600;
     font-size: 0.9em;
+    display: inline-block;
+    min-width: 80px;
+    text-align: center;
 }
+/* Service Status Colors */
 .status-received { background: #e5f0ff; color: #0056b3; }
 .status-in-progress { background: #fffbe5; color: #b36b00; }
 .status-completed { background: #e5ffe5; color: #1a8917; }
+.status-cancelled { background: #ffeaea; color: #c00; }
+/* Payment Status Colors */
+.payment-paid { background: #e5ffe5; color: #1a8917; }
+.payment-pending { background: #f7f7f7; color: #b36b00; }
+.payment-failed { background: #ffeaea; color: #c00; }
 
 .view-btn {
     background: #800000;
@@ -229,16 +367,23 @@ h1 {
         <?php endforeach; ?>
     </select>
 
+    <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="Search by Tracking ID, Mobile, or Customer Name" style="min-width:200px;" />
     <button type="submit">Apply</button>
 </form>
 
+
+<!-- LEGEND -->
+
+
 <!-- TABLE -->
+
 <table class="service-table">
 <thead>
 <tr>
     <th>Tracking ID</th>
     <th>Customer</th>
     <th>Mobile</th>
+    <th>Product(s)</th>
     <th>Category</th>
     <th>Amount</th>
     <th>Payment</th>
@@ -250,7 +395,7 @@ h1 {
 <tbody>
 <?php if (!$requests): ?>
 <tr>
-    <td colspan="9" class="no-data">No service requests found.</td>
+    <td colspan="10" class="no-data">No service requests found.</td>
 </tr>
 <?php else: ?>
 <?php foreach ($requests as $row): ?>
@@ -258,11 +403,51 @@ h1 {
     <td><?= htmlspecialchars($row['tracking_id']) ?></td>
     <td><?= htmlspecialchars($row['customer_name']) ?></td>
     <td><?= htmlspecialchars($row['mobile']) ?></td>
-    <td><?= htmlspecialchars($row['category_slug']) ?></td>
-    <td>₹<?= number_format($row['total_amount'], 2) ?></td>
-    <td><?= htmlspecialchars($row['payment_status']) ?></td>
     <td>
-        <span class="status-badge status-<?= strtolower(str_replace(' ', '-', $row['service_status'])) ?>">
+        <?php
+        $products = '-';
+        $decoded = json_decode($row['selected_products'], true);
+        if (is_array($decoded) && count($decoded)) {
+            $names = [];
+            foreach ($decoded as $prod) {
+                if (isset($prod['name'])) {
+                    $names[] = htmlspecialchars($prod['name']);
+                }
+            }
+            if ($names) {
+                $products = implode(', ', $names);
+            }
+        }
+        echo $products;
+        ?>
+    </td>
+    <td>
+        <?php
+        $catMap = [
+            'birth-child' => 'Birth & Child Services',
+            'marriage-matching' => 'Marriage & Matching',
+            'astrology-consultation' => 'Astrology Consultation',
+            'muhurat-event' => 'Muhurat & Event Guidance',
+            'pooja-vastu-enquiry' => 'Pooja, Ritual & Vastu Enquiry',
+        ];
+        $catSlug = $row['category_slug'];
+        echo isset($catMap[$catSlug]) ? htmlspecialchars($catMap[$catSlug]) : htmlspecialchars($catSlug);
+        ?>
+    </td>
+    <td>₹<?= number_format($row['total_amount'], 2) ?></td>
+    <td>
+        <?php
+        $payClass = 'payment-' . strtolower(str_replace(' ', '-', $row['payment_status']));
+        ?>
+        <span class="status-badge <?= $payClass ?>">
+            <?= htmlspecialchars($row['payment_status']) ?>
+        </span>
+    </td>
+    <td>
+        <?php
+        $statusClass = 'status-' . strtolower(str_replace(' ', '-', $row['service_status']));
+        ?>
+        <span class="status-badge <?= $statusClass ?>">
             <?= htmlspecialchars($row['service_status']) ?>
         </span>
     </td>
@@ -273,6 +458,71 @@ h1 {
 <?php endif; ?>
 </tbody>
 </table>
+
+<!-- PAGINATION CONTROLS -->
+<?php if ($totalPages > 1): ?>
+<div style="margin: 24px 0; text-align: center;">
+    <nav class="pagination">
+        <?php
+        // Build base URL with filters/search
+        $query = $_GET;
+        unset($query['page']);
+        $baseUrl = strtok($_SERVER['REQUEST_URI'], '?');
+        $queryStr = http_build_query($query);
+        $linkBase = $baseUrl . ($queryStr ? '?' . $queryStr . '&' : '?') . 'page=';
+
+        // Previous
+        if ($page > 1) {
+            echo '<a href="' . htmlspecialchars($linkBase . ($page - 1)) . '" class="page-link">&laquo; Previous</a> ';
+        } else {
+            echo '<span class="page-link disabled">&laquo; Previous</span> ';
+        }
+
+        // Page numbers
+        for ($i = 1; $i <= $totalPages; $i++) {
+            if ($i == $page) {
+                echo '<span class="page-link current">' . $i . '</span> ';
+            } else {
+                echo '<a href="' . htmlspecialchars($linkBase . $i) . '" class="page-link">' . $i . '</a> ';
+            }
+        }
+
+        // Next
+        if ($page < $totalPages) {
+            echo '<a href="' . htmlspecialchars($linkBase . ($page + 1)) . '" class="page-link">Next &raquo;</a>';
+        } else {
+            echo '<span class="page-link disabled">Next &raquo;</span>';
+        }
+        ?>
+    </nav>
+</div>
+<?php endif; ?>
+</style>
+<style>
+.pagination .page-link {
+    display: inline-block;
+    margin: 0 3px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: #f9eaea;
+    color: #800000;
+    text-decoration: none;
+    font-weight: 600;
+    border: 1px solid #f3caca;
+    min-width: 32px;
+}
+.pagination .page-link.current {
+    background: #800000;
+    color: #fff;
+    border: 1px solid #800000;
+}
+.pagination .page-link.disabled {
+    background: #f7f7fa;
+    color: #bbb;
+    border: 1px solid #eee;
+    cursor: not-allowed;
+}
+</style>
 
 </div>
 </body>
