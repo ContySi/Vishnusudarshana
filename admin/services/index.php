@@ -1,7 +1,28 @@
 <?php
 require_once __DIR__ . '/../../config/db.php';
 
-// Service Status & Category Filter
+/* ==============================
+   SUMMARY COUNTS
+============================== */
+$todayCount = $pdo->query(
+    "SELECT COUNT(*) FROM service_requests WHERE DATE(created_at) = CURDATE()"
+)->fetchColumn();
+
+$receivedCount = $pdo->query(
+    "SELECT COUNT(*) FROM service_requests WHERE service_status = 'Received'"
+)->fetchColumn();
+
+$inProgressCount = $pdo->query(
+    "SELECT COUNT(*) FROM service_requests WHERE service_status = 'In Progress'"
+)->fetchColumn();
+
+$completedCount = $pdo->query(
+    "SELECT COUNT(*) FROM service_requests WHERE service_status = 'Completed'"
+)->fetchColumn();
+
+/* ==============================
+   FILTERS
+============================== */
 $statusOptions = ['All', 'Received', 'In Progress', 'Completed'];
 $categoryOptions = [
     'All' => 'All Categories',
@@ -11,20 +32,31 @@ $categoryOptions = [
     'muhurat-event' => 'Muhurat & Event Guidance',
     'pooja-vastu-enquiry' => 'Pooja, Ritual & Vastu Enquiry',
 ];
-$selectedStatus = $_GET['status'] ?? 'All';
+
+$selectedStatus   = $_GET['status']   ?? 'All';
 $selectedCategory = $_GET['category'] ?? 'All';
-$where = [];
+
+$where  = [];
 $params = [];
+
 if ($selectedStatus !== 'All') {
-    $where[] = 'service_status = ?';
+    $where[]  = 'service_status = ?';
     $params[] = $selectedStatus;
 }
 if ($selectedCategory !== 'All') {
-    $where[] = 'category_slug = ?';
+    $where[]  = 'category_slug = ?';
     $params[] = $selectedCategory;
 }
-$whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
-$sql = "SELECT id, tracking_id, customer_name, mobile, category_slug, total_amount, payment_status, service_status, created_at FROM service_requests $whereSql ORDER BY created_at DESC";
+
+$whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+$sql = "
+    SELECT id, tracking_id, customer_name, mobile, category_slug,
+           total_amount, payment_status, service_status, created_at
+    FROM service_requests
+    $whereSql
+    ORDER BY created_at DESC
+";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -32,98 +64,216 @@ $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Service Requests</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f7f7fa; margin: 0; }
-        .admin-container { max-width: 1100px; margin: 0 auto; padding: 28px 12px; }
-        h1 { font-size: 1.5em; margin-bottom: 18px; color: #800000; }
-        .filter-bar { margin-bottom: 18px; }
-        .filter-bar label { font-weight: 600; margin-right: 8px; }
-        .filter-bar select { padding: 6px 12px; border-radius: 6px; border: 1px solid #ccc; font-size: 1em; }
-        .service-table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 2px 12px #e0bebe22; border-radius: 12px; overflow: hidden; }
-        .service-table th, .service-table td { padding: 12px 10px; border-bottom: 1px solid #f3caca; text-align: left; font-size: 1em; }
-        .service-table th { background: #f9eaea; color: #800000; font-weight: 700; }
-        .service-table tr:last-child td { border-bottom: none; }
-        .status-badge { padding: 2px 12px; border-radius: 8px; font-weight: 600; font-size: 0.98em; background: #f7e7e7; color: #800000; display: inline-block; }
-        .status-badge.status-paid { background: #e5ffe5; color: #1a8917; }
-        .status-badge.status-received { background: #e5f0ff; color: #0056b3; }
-        .status-badge.status-completed { background: #e5ffe5; color: #1a8917; }
-        .status-badge.status-in\ progress { background: #fffbe5; color: #b36b00; }
-        .view-btn { background: #800000; color: #fff; border: none; border-radius: 8px; padding: 8px 18px; font-size: 0.98em; font-weight: 600; text-align: center; text-decoration: none; box-shadow: 0 2px 8px #80000022; transition: background 0.15s; display: inline-block; cursor: pointer; }
-        .view-btn:active { background: #5a0000; }
-        @media (max-width: 800px) {
-            .admin-container { padding: 12px 2px; }
-            .service-table th, .service-table td { padding: 8px 4px; font-size: 0.97em; }
-        }
-        .no-data { text-align: center; color: #888; padding: 32px 0; font-size: 1.1em; }
-    </style>
+<meta charset="UTF-8">
+<title>Admin – Service Requests</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f7f7fa;
+    margin: 0;
+}
+.admin-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 12px;
+}
+h1 {
+    color: #800000;
+    margin-bottom: 18px;
+}
+
+/* SUMMARY CARDS */
+.summary-cards {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+.summary-card {
+    flex: 1 1 180px;
+    background: #fffbe7;
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+    box-shadow: 0 2px 8px #e0bebe22;
+}
+.summary-count {
+    font-size: 2.2em;
+    font-weight: 700;
+    color: #800000;
+}
+.summary-label {
+    font-size: 1em;
+    color: #444;
+}
+
+/* FILTER BAR */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+.filter-bar label {
+    font-weight: 600;
+}
+.filter-bar select,
+.filter-bar button {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 1em;
+}
+.filter-bar button {
+    background: #800000;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+}
+
+/* TABLE */
+.service-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    box-shadow: 0 2px 12px #e0bebe22;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.service-table th,
+.service-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #f3caca;
+    text-align: left;
+}
+.service-table th {
+    background: #f9eaea;
+    color: #800000;
+}
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9em;
+}
+.status-received { background: #e5f0ff; color: #0056b3; }
+.status-in-progress { background: #fffbe5; color: #b36b00; }
+.status-completed { background: #e5ffe5; color: #1a8917; }
+
+.view-btn {
+    background: #800000;
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.no-data {
+    text-align: center;
+    color: #777;
+    padding: 24px;
+}
+
+@media (max-width: 700px) {
+    .summary-cards {
+        flex-direction: column;
+    }
+}
+</style>
 </head>
+
 <body>
 <div class="admin-container">
-    <h1>Service Requests</h1>
-    <form class="filter-bar" method="get" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
-        <label for="category">Category:</label>
-        <select name="category" id="category" style="min-width:180px;" onchange="this.form.submit()">
-            <?php foreach ($categoryOptions as $key => $label): ?>
-                <option value="<?php echo $key; ?>" <?php if ($selectedCategory === $key) echo 'selected'; ?>><?php echo $label; ?></option>
-            <?php endforeach; ?>
-        </select>
-        <label for="status">Service Status:</label>
-        <select name="status" id="status" style="min-width:140px;" onchange="this.form.submit()">
-            <?php foreach ($statusOptions as $opt): ?>
-                <option value="<?php echo $opt; ?>" <?php if ($selectedStatus === $opt) echo 'selected'; ?>><?php echo $opt; ?></option>
-            <?php endforeach; ?>
-        </select>
-        <button type="submit" style="background:#800000;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:0.98em;font-weight:600;cursor:pointer;">Apply Filter</button>
-    </form>
-    <div class="table-responsive">
-        <table class="service-table">
-            <thead>
-                <tr>
-                    <th>Tracking ID</th>
-                    <th>Customer Name</th>
-                    <th>Mobile</th>
-                    <th>Category</th>
-                    <th>Total Amount</th>
-                    <th>Payment Status</th>
-                    <th>Service Status</th>
-                    <th>Created Date</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (!$requests): ?>
-                    <tr><td colspan="9" class="no-data">No service requests found.</td></tr>
-                <?php else: ?>
-                    <?php foreach ($requests as $row): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($row['tracking_id']); ?></td>
-                            <td><?php echo htmlspecialchars($row['customer_name']); ?></td>
-                            <td><?php echo htmlspecialchars($row['mobile']); ?></td>
-                            <td><?php
-                                $categoryTitles = [
-                                    'birth-child' => 'Birth & Child Services',
-                                    'marriage-matching' => 'Marriage & Matching',
-                                    'astrology-consultation' => 'Astrology Consultation',
-                                    'muhurat-event' => 'Muhurat & Event Guidance',
-                                    'pooja-vastu-enquiry' => 'Pooja, Ritual & Vastu Enquiry',
-                                ];
-                                $cat = $row['category_slug'];
-                                echo isset($categoryTitles[$cat]) ? $categoryTitles[$cat] : htmlspecialchars($cat);
-                            ?></td>
-                            <td>₹<?php echo number_format($row['total_amount'], 2); ?></td>
-                            <td><span class="status-badge status-<?php echo strtolower($row['payment_status']); ?>"><?php echo htmlspecialchars($row['payment_status']); ?></span></td>
-                            <td><span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $row['service_status'])); ?>"><?php echo htmlspecialchars($row['service_status']); ?></span></td>
-                            <td><?php echo date('d-m-Y', strtotime($row['created_at'])); ?></td>
-                            <td><a href="view.php?id=<?php echo $row['id']; ?>" class="view-btn">View</a></td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
+
+<h1>Service Requests</h1>
+
+<!-- SUMMARY CARDS -->
+<div class="summary-cards">
+    <div class="summary-card">
+        <div class="summary-count"><?= $todayCount ?></div>
+        <div class="summary-label">Today’s Requests</div>
     </div>
+    <div class="summary-card">
+        <div class="summary-count"><?= $receivedCount ?></div>
+        <div class="summary-label">Pending</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-count"><?= $inProgressCount ?></div>
+        <div class="summary-label">In Progress</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-count"><?= $completedCount ?></div>
+        <div class="summary-label">Completed</div>
+    </div>
+</div>
+
+<!-- FILTERS -->
+<form class="filter-bar" method="get">
+    <label>Category</label>
+    <select name="category" onchange="this.form.submit()">
+        <?php foreach ($categoryOptions as $k => $v): ?>
+            <option value="<?= $k ?>" <?= $selectedCategory === $k ? 'selected' : '' ?>>
+                <?= $v ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+
+    <label>Status</label>
+    <select name="status" onchange="this.form.submit()">
+        <?php foreach ($statusOptions as $s): ?>
+            <option value="<?= $s ?>" <?= $selectedStatus === $s ? 'selected' : '' ?>>
+                <?= $s ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+
+    <button type="submit">Apply</button>
+</form>
+
+<!-- TABLE -->
+<table class="service-table">
+<thead>
+<tr>
+    <th>Tracking ID</th>
+    <th>Customer</th>
+    <th>Mobile</th>
+    <th>Category</th>
+    <th>Amount</th>
+    <th>Payment</th>
+    <th>Status</th>
+    <th>Date</th>
+    <th>Action</th>
+</tr>
+</thead>
+<tbody>
+<?php if (!$requests): ?>
+<tr>
+    <td colspan="9" class="no-data">No service requests found.</td>
+</tr>
+<?php else: ?>
+<?php foreach ($requests as $row): ?>
+<tr>
+    <td><?= htmlspecialchars($row['tracking_id']) ?></td>
+    <td><?= htmlspecialchars($row['customer_name']) ?></td>
+    <td><?= htmlspecialchars($row['mobile']) ?></td>
+    <td><?= htmlspecialchars($row['category_slug']) ?></td>
+    <td>₹<?= number_format($row['total_amount'], 2) ?></td>
+    <td><?= htmlspecialchars($row['payment_status']) ?></td>
+    <td>
+        <span class="status-badge status-<?= strtolower(str_replace(' ', '-', $row['service_status'])) ?>">
+            <?= htmlspecialchars($row['service_status']) ?>
+        </span>
+    </td>
+    <td><?= date('d-m-Y', strtotime($row['created_at'])) ?></td>
+    <td><a class="view-btn" href="view.php?id=<?= $row['id'] ?>">View</a></td>
+</tr>
+<?php endforeach; ?>
+<?php endif; ?>
+</tbody>
+</table>
+
 </div>
 </body>
 </html>
