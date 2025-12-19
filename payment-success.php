@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/config/db.php';
 require_once 'header.php';
+require_once __DIR__ . '/helpers/send_whatsapp.php';
 
 // Step 2: Validate payment_id
 $payment_id = $_GET['payment_id'] ?? '';
@@ -64,74 +65,113 @@ $formData = $pending['form_data'] ?? $customer;
 $selectedProducts = $products;
 $paymentId = $payment_id;
 
+// Prepare WhatsApp notification variables (Step 2)
+$mobileNumber = $mobile;
+$trackingId = null; // will be set after DB check/insert
+$categoryName = '';
+$trackingLink = '';
+
+// Get human-readable category name
+// Use category.php's $categories array for mapping
+$categoryTitles = [
+    'birth-child' => 'Birth & Child Services',
+    'marriage-matching' => 'Marriage & Matching',
+    'astrology-consultation' => 'Astrology Consultation',
+    'muhurat-event' => 'Muhurat & Event Guidance',
+    'pooja-vastu-enquiry' => 'Pooja, Ritual & Vastu Enquiry',
+];
+$categoryName = $categoryTitles[$category] ?? ucfirst(str_replace('-', ' ', $category));
+
 // Prevent duplicate insert by checking payment_id
 $stmtCheck = $pdo->prepare("SELECT tracking_id FROM service_requests WHERE payment_id = ?");
 $stmtCheck->execute([$paymentId]);
 $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 if ($existing && !empty($existing['tracking_id'])) {
-        $trackingId = $existing['tracking_id'];
+    $trackingId = $existing['tracking_id'];
 } else {
-        $stmt = $pdo->prepare("
-            INSERT INTO service_requests (
-                tracking_id,
-                category_slug,
-                customer_name,
-                mobile,
-                email,
-                city,
-                form_data,
-                selected_products,
-                total_amount,
-                payment_id,
-                payment_status,
-                service_status
-            ) VALUES (
-                :tracking_id,
-                :category_slug,
-                :customer_name,
-                :mobile,
-                :email,
-                :city,
-                :form_data,
-                :selected_products,
-                :total_amount,
-                :payment_id,
-                :payment_status,
-                :service_status
-            )
-        ");
-        $stmt->execute([
-            ':tracking_id'       => $tracking_id,
-            ':category_slug'     => $category,
-            ':customer_name'     => $customerName,
-            ':mobile'            => $mobile,
-            ':email'             => $email,
-            ':city'              => $city,
-            ':form_data'         => json_encode($formData),
-            ':selected_products' => json_encode($selectedProducts),
-            ':total_amount'      => $totalAmount,
-            ':payment_id'        => $paymentId,
-            ':payment_status'    => 'Paid',
-            ':service_status'    => 'Received'
-        ]);
-        $trackingId = $tracking_id;
-        // Step 6: Save tracking
-        $stmtTrack = $pdo->prepare("
-            INSERT INTO tracking (
-                tracking_id,
-                customer_name,
-                mobile,
-                service_category,
-                service_status
-            ) VALUES (?, ?, ?, ?, ?)
-        ");
-        $stmtTrack->execute([
-            $trackingId,
-            $customerName,
-            $mobile,
-            $category,
-            'Received'
-        ]);
+    $stmt = $pdo->prepare("
+        INSERT INTO service_requests (
+            tracking_id,
+            category_slug,
+            customer_name,
+            mobile,
+            email,
+            city,
+            form_data,
+            selected_products,
+            total_amount,
+            payment_id,
+            payment_status,
+            service_status
+        ) VALUES (
+            :tracking_id,
+            :category_slug,
+            :customer_name,
+            :mobile,
+            :email,
+            :city,
+            :form_data,
+            :selected_products,
+            :total_amount,
+            :payment_id,
+            :payment_status,
+            :service_status
+        )
+    ");
+    $stmt->execute([
+        ':tracking_id'       => $tracking_id,
+        ':category_slug'     => $category,
+        ':customer_name'     => $customerName,
+        ':mobile'            => $mobile,
+        ':email'             => $email,
+        ':city'              => $city,
+        ':form_data'         => json_encode($formData),
+        ':selected_products' => json_encode($selectedProducts),
+        ':total_amount'      => $totalAmount,
+        ':payment_id'        => $paymentId,
+        ':payment_status'    => 'Paid',
+        ':service_status'    => 'Received'
+    ]);
+    $trackingId = $tracking_id;
+    // Step 6: Save tracking
+    $stmtTrack = $pdo->prepare("
+        INSERT INTO tracking (
+            tracking_id,
+            customer_name,
+            mobile,
+            service_category,
+            service_status
+        ) VALUES (?, ?, ?, ?, ?)
+    ");
+    $stmtTrack->execute([
+        $trackingId,
+        $customerName,
+        $mobile,
+        $category,
+        'Received'
+    ]);
+}
+
+// Step 2 (cont): Prepare tracking link
+$trackingLink = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") .
+    "://" . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']) . "/track.php?tracking_id=" . urlencode($trackingId);
+
+// Step 3: Call WhatsApp function (with error safety)
+try {
+    sendWhatsAppMessage(
+        $mobileNumber,
+        'payment_success',
+        'en',
+        [
+            'name' => $customerName,
+            'tracking_id' => $trackingId,
+            'category' => $categoryName,
+            'tracking_link' => $trackingLink
+        ]
+    );
+} catch (Throwable $e) {
+    error_log('WhatsApp notification failed: ' . $e->getMessage());
+    // Do not interrupt page rendering
 }
 // Step 7: Clear session
 unset($_SESSION['pending_payment']);

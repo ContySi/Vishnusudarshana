@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../helpers/send_whatsapp.php';
 
 $id = $_GET['id'] ?? '';
 if (!$id) {
@@ -17,18 +18,67 @@ if (!$request) {
 }
 
 $statusOptions = ['Received', 'In Progress', 'Completed'];
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['service_status'])) {
-    $newStatus = $_POST['service_status'];
-    if (in_array($newStatus, $statusOptions)) {
-        // Update service_requests
-        $stmt = $pdo->prepare('UPDATE service_requests SET service_status = ? WHERE id = ?');
-        $stmt->execute([$newStatus, $id]);
-        // Update tracking
-        $stmt2 = $pdo->prepare('UPDATE tracking SET service_status = ? WHERE tracking_id = ?');
-        $stmt2->execute([$newStatus, $request['tracking_id']]);
-        // Refresh data
-        $request['service_status'] = $newStatus;
-        $successMsg = 'Service status updated.';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
+    // Fetch latest service record BEFORE update
+    $stmt = $pdo->prepare('SELECT service_status, customer_name, mobile, tracking_id, category_slug FROM service_requests WHERE id = ?');
+    $stmt->execute([$id]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$row) {
+        error_log('Admin status update: Service request not found for ID ' . $id);
+    } else {
+        $oldStatus = $row['service_status'];
+        $customerName = $row['customer_name'];
+        $mobile = $row['mobile'];
+        $trackingId = $row['tracking_id'];
+        $categorySlug = $row['category_slug'];
+        $newStatus = $_POST['service_status'];
+        error_log("Admin status update: oldStatus=$oldStatus, newStatus=$newStatus, trackingId=$trackingId");
+        if (in_array($newStatus, $statusOptions)) {
+            // Update service_requests
+            $stmt = $pdo->prepare('UPDATE service_requests SET service_status = ? WHERE id = ?');
+            $stmt->execute([$newStatus, $id]);
+            // Update tracking
+            $stmt2 = $pdo->prepare('UPDATE tracking SET service_status = ? WHERE tracking_id = ?');
+            $stmt2->execute([$newStatus, $trackingId]);
+            // Refresh data
+            $request['service_status'] = $newStatus;
+            $successMsg = 'Service status updated.';
+
+            // WhatsApp notification only if status changed
+            if ($oldStatus !== $newStatus) {
+                require_once __DIR__ . '/../../helpers/send_whatsapp.php';
+                $categoryTitles = [
+                    'birth-child' => 'Birth & Child Services',
+                    'marriage-matching' => 'Marriage & Matching',
+                    'astrology-consultation' => 'Astrology Consultation',
+                    'muhurat-event' => 'Muhurat & Event Guidance',
+                    'pooja-vastu-enquiry' => 'Pooja, Ritual & Vastu Enquiry',
+                ];
+                $category = $categoryTitles[$categorySlug] ?? ucfirst(str_replace('-', ' ', $categorySlug));
+                $trackingLink = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") .
+                    "://" . $_SERVER['HTTP_HOST'] . dirname(dirname(dirname($_SERVER['SCRIPT_NAME']))) . "/track.php?tracking_id=" . urlencode($trackingId);
+                error_log("Admin status update: Triggering WhatsApp for $mobile, status=$newStatus");
+                try {
+                    sendWhatsAppMessage(
+                        $mobile,
+                        'service_status_update',
+                        'en',
+                        [
+                            'name' => $customerName,
+                            'tracking_id' => $trackingId,
+                            'category' => $category,
+                            'status' => $newStatus,
+                            'tracking_link' => $trackingLink
+                        ]
+                    );
+                    error_log("Admin status update: WhatsApp message sent (or logged in test mode)");
+                } catch (Throwable $e) {
+                    error_log('WhatsApp status update failed: ' . $e->getMessage());
+                }
+            } else {
+                error_log("Admin status update: Status unchanged, WhatsApp not triggered");
+            }
+        }
     }
 }
 // Handle file upload
@@ -70,6 +120,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_files']) && !e
     $stmt->execute([json_encode($allFiles), $id]);
     $request['uploaded_files'] = json_encode($allFiles);
     $uploadMsg = count($meta) . ' file(s) uploaded.';
+
+    // WhatsApp notification after successful upload
+    if (count($meta) > 0) {
+        // Fetch latest service record for WhatsApp data
+        $stmt = $pdo->prepare('SELECT customer_name, mobile, tracking_id, category_slug FROM service_requests WHERE id = ?');
+        $stmt->execute([$id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $customerName = $row['customer_name'];
+            $mobile = $row['mobile'];
+            $trackingId = $row['tracking_id'];
+            $categorySlug = $row['category_slug'];
+            $categoryTitles = [
+                'birth-child' => 'Birth & Child Services',
+                'marriage-matching' => 'Marriage & Matching',
+                'astrology-consultation' => 'Astrology Consultation',
+                'muhurat-event' => 'Muhurat & Event Guidance',
+                'pooja-vastu-enquiry' => 'Pooja, Ritual & Vastu Enquiry',
+            ];
+            $category = $categoryTitles[$categorySlug] ?? ucfirst(str_replace('-', ' ', $categorySlug));
+            $trackingLink = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") .
+                "://" . $_SERVER['HTTP_HOST'] . dirname(dirname(dirname($_SERVER['SCRIPT_NAME']))) . "/track.php?tracking_id=" . urlencode($trackingId);
+            require_once __DIR__ . '/../../helpers/send_whatsapp.php';
+            try {
+                sendWhatsAppMessage(
+                    '91' . $mobile,
+                    'service_file_uploaded',
+                    'en',
+                    [
+                        'name' => $customerName,
+                        'tracking_id' => $trackingId,
+                        'category' => $category,
+                        'tracking_link' => $trackingLink
+                    ]
+                );
+                error_log("Admin file upload: WhatsApp message sent (or logged in test mode) for $mobile");
+            } catch (Throwable $e) {
+                error_log('WhatsApp file upload failed: ' . $e->getMessage());
+            }
+        } else {
+            error_log('Admin file upload: Service record not found for WhatsApp notification');
+        }
+    }
 }
 // Decode form data
 $formData = [];
@@ -293,7 +386,7 @@ if (!empty($request['uploaded_files'])) {
                 <option value="<?php echo $opt; ?>" <?php if ($request['service_status'] === $opt) echo 'selected'; ?>><?php echo $opt; ?></option>
             <?php endforeach; ?>
         </select>
-        <button type="submit">Update</button>
+        <button type="submit" name="update_status">Update</button>
     </form>
     <a href="index.php" style="color:#800000;text-decoration:underline;font-size:0.98em;">&larr; Back to List</a>
 </div>
