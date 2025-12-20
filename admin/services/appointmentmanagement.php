@@ -67,12 +67,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
                         <td><?= ucfirst($a['appointment_type']) ?></td>
                         <td><?= htmlspecialchars($a['preferred_time_slot']) ?></td>
                         <td><?= nl2br(htmlspecialchars($a['notes'])) ?></td>
-                        <td>
-                            <input type="time" name="from[<?= $a['id'] ?>]" style="width:90px;">
-                        </td>
-                        <td>
-                            <input type="time" name="to[<?= $a['id'] ?>]" style="width:90px;">
-                        </td>
+                        <td></td>
+                        <td></td>
                         <td><span class="status-badge payment-paid">Paid</span></td>
                         <td><span class="status-badge status-pending">Pending</span></td>
                         <td><?= date('d-m-Y H:i', strtotime($a['created_at'])) ?></td>
