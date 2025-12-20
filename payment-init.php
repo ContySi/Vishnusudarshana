@@ -20,43 +20,63 @@ if ($source === 'appointment' && $appointmentId) {
         exit;
     }
     
-    // Get product selection from session
-    $appointmentProducts = $_SESSION['appointment_products'] ?? null;
+    // Prefer product_id on appointment if column exists
     $selected_products = [];
     $total_amount = 0;
-    
-    if ($appointmentProducts && !empty($appointmentProducts['product_ids'])) {
-        $productIds = $appointmentProducts['product_ids'];
-        $quantities = $appointmentProducts['quantities'];
-        
-        // Fetch selected products from database and validate they're active
-        $placeholders = implode(',', array_fill(0, count($productIds), '?'));
-        $productStmt = $pdo->prepare("SELECT * FROM products WHERE id IN ($placeholders) AND is_active = 1");
-        $productStmt->execute($productIds);
-        $products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        foreach ($products as $product) {
-            $pid = $product['id'];
-            $qty = isset($quantities[$pid]) ? max(1, intval($quantities[$pid])) : 1;
-            $line_total = $product['price'] * $qty;
+    $hasProductIdCol = false;
+    try {
+        $colCheck = $pdo->query("SHOW COLUMNS FROM appointments LIKE 'product_id'");
+        $hasProductIdCol = (bool)$colCheck->fetch();
+    } catch (Throwable $e) {}
+
+    if ($hasProductIdCol && !empty($appointment['product_id'])) {
+        $pid = (int)$appointment['product_id'];
+        $stmtP = $pdo->prepare("SELECT * FROM products WHERE id = ? AND is_active = 1");
+        $stmtP->execute([$pid]);
+        $p = $stmtP->fetch(PDO::FETCH_ASSOC);
+        if ($p) {
             $selected_products[] = [
-                'id' => $pid,
-                'name' => $product['product_name'],
-                'desc' => $product['short_description'],
-                'price' => $product['price'],
-                'qty' => $qty,
-                'line_total' => $line_total
+                'id' => $p['id'],
+                'name' => $p['product_name'],
+                'desc' => $p['short_description'],
+                'price' => $p['price'],
+                'qty' => 1,
+                'line_total' => $p['price']
             ];
-            $total_amount += $line_total;
+            $total_amount = $p['price'];
         }
     }
-    
-    // Ensure at least one product for appointment payment
+
+    // Fallbacks: session-based selection or default appointment product
     if (empty($selected_products)) {
-        // Fetch default appointment product as fallback
+        $appointmentProducts = $_SESSION['appointment_products'] ?? null;
+        if ($appointmentProducts && !empty($appointmentProducts['product_ids'])) {
+            $productIds = $appointmentProducts['product_ids'];
+            $quantities = $appointmentProducts['quantities'];
+            $placeholders = implode(',', array_fill(0, count($productIds), '?'));
+            $productStmt = $pdo->prepare("SELECT * FROM products WHERE id IN ($placeholders) AND is_active = 1");
+            $productStmt->execute($productIds);
+            $products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($products as $product) {
+                $pid = $product['id'];
+                $qty = isset($quantities[$pid]) ? max(1, intval($quantities[$pid])) : 1;
+                $line_total = $product['price'] * $qty;
+                $selected_products[] = [
+                    'id' => $pid,
+                    'name' => $product['product_name'],
+                    'desc' => $product['short_description'],
+                    'price' => $product['price'],
+                    'qty' => $qty,
+                    'line_total' => $line_total
+                ];
+                $total_amount += $line_total;
+            }
+        }
+    }
+
+    if (empty($selected_products)) {
         $productStmt = $pdo->query("SELECT * FROM products WHERE (category_slug = 'appointment' OR category = 'appointment') AND is_active = 1 ORDER BY price ASC LIMIT 1");
         $appointmentProduct = $productStmt->fetch(PDO::FETCH_ASSOC);
-        
         if ($appointmentProduct) {
             $selected_products[] = [
                 'id' => $appointmentProduct['id'],
@@ -68,7 +88,6 @@ if ($source === 'appointment' && $appointmentId) {
             ];
             $total_amount = $appointmentProduct['price'];
         } else {
-            // Final fallback: show error
             echo '<main class="main-content"><h2>No appointment services available</h2>';
             echo '<p>Please contact support to complete your appointment booking.</p>';
             echo '<a href="services.php" class="review-back-link">&larr; Back to Services</a></main>';

@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../config/db.php';
 
 $categoryOptions = [
+    'appointment' => 'Appointment Booking',
     'birth-child' => 'Birth & Child Services',
     'marriage-matching' => 'Marriage & Matching',
     'astrology-consultation' => 'Astrology Consultation',

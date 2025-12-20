@@ -26,6 +26,8 @@ $email           = trim($_POST['email'] ?? '');
 $notes           = trim($_POST['notes'] ?? '');
 $productIds      = $_POST['product_ids'] ?? [];
 $quantities      = $_POST['qty'] ?? [];
+// Primary product selection (for single product_id storage)
+$primaryProductId = $_POST['product_id'] ?? (is_array($productIds) && count($productIds) ? $productIds[0] : null);
 
 // 2b) Validate required fields
 $errors = [];
@@ -50,8 +52,23 @@ if ($phone === '') {
 if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
 	$errors[] = 'email is invalid';
 }
-if (empty($productIds) || !is_array($productIds)) {
-	$errors[] = 'Please select at least one service';
+// If appointments table has product_id column, require a valid active product
+$hasProductIdCol = table_has_column($pdo, 'appointments', 'product_id');
+if ($hasProductIdCol) {
+	if (!($primaryProductId && ctype_digit((string)$primaryProductId))) {
+		$errors[] = 'Please select at least one service';
+	} else {
+		$stmt = $pdo->prepare('SELECT id FROM products WHERE id = ? AND is_active = 1');
+		$stmt->execute([$primaryProductId]);
+		if (!$stmt->fetch()) {
+			$errors[] = 'Selected service is not available';
+		}
+	}
+} else {
+	// Legacy path: require any selection for downstream payment/init
+	if (empty($productIds) || !is_array($productIds)) {
+		$errors[] = 'Please select at least one service';
+	}
 }
 
 if (!empty($errors)) {
@@ -103,17 +120,50 @@ function table_has_column(PDO $pdo, string $table, string $column): bool {
 }
 
 $hasServiceId = table_has_column($pdo, 'appointments', 'service_id');
+// Re-check product_id column for inserts
+$hasProductIdCol = $hasProductIdCol || table_has_column($pdo, 'appointments', 'product_id');
 
 // 4) Prepare values and insert with prepared statements
 $paymentStatus = ($appointmentType === 'online') ? 'paid' : 'unpaid';
 
 try {
-	if ($hasServiceId) {
+	if ($hasServiceId && $hasProductIdCol) {
+		$stmt = $pdo->prepare("INSERT INTO appointments 
+			(service_id, product_id, customer_name, mobile, email, appointment_type, preferred_date, preferred_time_slot, notes, status, payment_status)
+			VALUES (:service_id, :product_id, :name, :mobile, :email, :type, :pdate, :ptime, :notes, 'pending', :pstatus)");
+		$stmt->execute([
+			':service_id' => (int)$serviceId,
+			':product_id' => (int)$primaryProductId,
+			':name'       => $name,
+			':mobile'     => $phone,
+			':email'      => $email ?: null,
+			':type'       => $appointmentType,
+			':pdate'      => $preferredDate,
+			':ptime'      => $preferredTime,
+			':notes'      => $notes ?: null,
+			':pstatus'    => $paymentStatus,
+		]);
+	} elseif ($hasServiceId && !$hasProductIdCol) {
 		$stmt = $pdo->prepare("INSERT INTO appointments 
 			(service_id, customer_name, mobile, email, appointment_type, preferred_date, preferred_time_slot, notes, status, payment_status)
 			VALUES (:service_id, :name, :mobile, :email, :type, :pdate, :ptime, :notes, 'pending', :pstatus)");
 		$stmt->execute([
 			':service_id' => (int)$serviceId,
+			':name'       => $name,
+			':mobile'     => $phone,
+			':email'      => $email ?: null,
+			':type'       => $appointmentType,
+			':pdate'      => $preferredDate,
+			':ptime'      => $preferredTime,
+			':notes'      => $notes ?: null,
+			':pstatus'    => $paymentStatus,
+		]);
+	} elseif (!$hasServiceId && $hasProductIdCol) {
+		$stmt = $pdo->prepare("INSERT INTO appointments 
+			(product_id, customer_name, mobile, email, appointment_type, preferred_date, preferred_time_slot, notes, status, payment_status)
+			VALUES (:product_id, :name, :mobile, :email, :type, :pdate, :ptime, :notes, 'pending', :pstatus)");
+		$stmt->execute([
+			':product_id' => (int)$primaryProductId,
 			':name'       => $name,
 			':mobile'     => $phone,
 			':email'      => $email ?: null,
@@ -141,8 +191,8 @@ try {
 
 	$appointmentId = (int)$pdo->lastInsertId();
 
-	// 5) Store product selection in session for payment flow
-	if (!empty($productIds) && is_array($productIds)) {
+	// 5) Store product selection in session for payment flow (legacy)
+	if (!$hasProductIdCol && !empty($productIds) && is_array($productIds)) {
 		$_SESSION['appointment_products'] = [
 			'product_ids' => $productIds,
 			'quantities' => $quantities,
