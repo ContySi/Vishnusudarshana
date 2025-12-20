@@ -72,7 +72,7 @@ if ($source === 'appointment') {
     }
 
     if (empty($selected_products)) {
-        $productStmt = $pdo->query("SELECT * FROM products WHERE (category_slug = 'appointment' OR category = 'appointment') AND is_active = 1 ORDER BY price ASC LIMIT 1");
+        $productStmt = $pdo->query("SELECT * FROM products WHERE category_slug = 'appointment' AND is_active = 1 ORDER BY price ASC LIMIT 1");
         $appointmentProduct = $productStmt->fetch(PDO::FETCH_ASSOC);
         if ($appointmentProduct) {
             $selected_products[] = [
@@ -124,7 +124,7 @@ if ($source === 'appointment') {
             }
         }
         if (empty($selected_products)) {
-            $productStmt = $pdo->query("SELECT * FROM products WHERE (category_slug = 'appointment' OR category = 'appointment') AND is_active = 1 ORDER BY price ASC LIMIT 1");
+            $productStmt = $pdo->query("SELECT * FROM products WHERE category_slug = 'appointment' AND is_active = 1 ORDER BY price ASC LIMIT 1");
             $appointmentProduct = $productStmt->fetch(PDO::FETCH_ASSOC);
             if ($appointmentProduct) {
                 $selected_products[] = [
