@@ -202,6 +202,11 @@ $uploadedFiles = [];
 if (!empty($request['uploaded_files'])) {
     $uploadedFiles = json_decode($request['uploaded_files'], true) ?: [];
 }
+
+// Fetch admin notes for this service
+$stmt = $pdo->prepare('SELECT note_text, created_at FROM admin_notes WHERE service_request_id = ? ORDER BY created_at DESC');
+$stmt->execute([$id]);
+$adminNotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -379,6 +384,111 @@ if (!empty($request['uploaded_files'])) {
             <?php else: ?>
                 <div style="color:#888;font-size:0.98em;margin-bottom:18px;">No files uploaded yet.</div>
             <?php endif; ?>
+
+    <!-- Internal Admin Notes Section -->
+    <h2 style="font-size:1.1em;color:#800000;margin:18px 0 8px 0;">Internal Admin Notes</h2>
+    <div id="notes_container">
+    <?php if ($adminNotes && count($adminNotes) > 0): ?>
+        <div style="background:#fef9f9;border:1px solid #f3caca;border-radius:8px;padding:12px;margin-bottom:18px;">
+            <?php foreach ($adminNotes as $note): ?>
+                <div style="background:#fff;border-left:3px solid #800000;padding:10px;margin-bottom:10px;border-radius:4px;">
+                    <div style="color:#333;font-size:0.98em;margin-bottom:6px;"><?php echo nl2br(htmlspecialchars($note['note_text'])); ?></div>
+                    <div style="color:#999;font-size:0.85em;font-style:italic;"><?php echo date('d M Y, h:i A', strtotime($note['created_at'])); ?></div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    <?php else: ?>
+        <div style="color:#888;font-size:0.98em;margin-bottom:18px;background:#fef9f9;border:1px solid #f3caca;border-radius:8px;padding:12px;">No internal notes yet.</div>
+    <?php endif; ?>
+    </div>
+
+    <!-- Add Internal Note Form -->
+    <div style="background:#fef9f9;border:1px solid #f3caca;border-radius:8px;padding:12px;margin-bottom:18px;">
+        <textarea id="note_text" placeholder="Add internal note (admin only)" style="width:100%;padding:10px;border:1px solid #f3caca;border-radius:6px;font-size:0.98em;font-family:Arial,sans-serif;min-height:80px;box-sizing:border-box;"></textarea>
+        <button onclick="saveNote()" style="background:#800000;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:0.98em;font-weight:600;cursor:pointer;margin-top:8px;">Save Note</button>
+        <span id="note_status" style="margin-left:10px;font-size:0.95em;"></span>
+    </div>
+
+    <script>
+    function saveNote() {
+        var noteText = document.getElementById('note_text').value.trim();
+        var statusEl = document.getElementById('note_status');
+        
+        if (noteText === '') {
+            statusEl.style.color = '#c00';
+            statusEl.textContent = 'Note cannot be empty';
+            return;
+        }
+        
+        statusEl.style.color = '#888';
+        statusEl.textContent = 'Saving...';
+        
+        var formData = new FormData();
+        formData.append('service_request_id', '<?php echo $id; ?>');
+        formData.append('note_text', noteText);
+        
+        fetch('ajax_add_note.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                statusEl.style.color = '#1a8917';
+                statusEl.textContent = 'Note saved successfully!';
+                document.getElementById('note_text').value = '';
+                refreshNotes();
+                setTimeout(() => {
+                    statusEl.textContent = '';
+                }, 3000);
+            } else {
+                statusEl.style.color = '#c00';
+                statusEl.textContent = data.message || 'Failed to save note';
+            }
+        })
+        .catch(error => {
+            statusEl.style.color = '#c00';
+            statusEl.textContent = 'Error saving note';
+            console.error('Error:', error);
+        });
+    }
+    
+    function refreshNotes() {
+        fetch('ajax_get_notes.php?service_request_id=<?php echo $id; ?>')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.notes) {
+                var notesContainer = document.getElementById('notes_container');
+                if (data.notes.length > 0) {
+                    var html = '<div style="background:#fef9f9;border:1px solid #f3caca;border-radius:8px;padding:12px;margin-bottom:18px;">';
+                    data.notes.forEach(note => {
+                        var date = new Date(note.created_at);
+                        var formattedDate = date.toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}) + ', ' + 
+                                           date.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit', hour12: true});
+                        html += '<div style="background:#fff;border-left:3px solid #800000;padding:10px;margin-bottom:10px;border-radius:4px;">';
+                        html += '<div style="color:#333;font-size:0.98em;margin-bottom:6px;">' + escapeHtml(note.note_text).replace(/\n/g, '<br>') + '</div>';
+                        html += '<div style="color:#999;font-size:0.85em;font-style:italic;">' + formattedDate + '</div>';
+                        html += '</div>';
+                    });
+                    html += '</div>';
+                    notesContainer.innerHTML = html;
+                } else {
+                    notesContainer.innerHTML = '<div style="color:#888;font-size:0.98em;margin-bottom:18px;background:#fef9f9;border:1px solid #f3caca;border-radius:8px;padding:12px;">No internal notes yet.</div>';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing notes:', error);
+        });
+    }
+    
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    </script>
+
     <form class="form-bar" method="post">
         <label for="service_status">Update Service Status:</label>
         <select name="service_status" id="service_status">
