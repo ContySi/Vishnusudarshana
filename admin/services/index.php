@@ -38,6 +38,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('.filter-bar');
     const searchInput = form.querySelector('input[name="search"]');
     const tableBody = document.getElementById('serviceTableBody');
+    const paginationContainer = document.getElementById('pagination');
+    let paginationState = {
+        totalPages: <?= json_encode($totalPages) ?>,
+        currentPage: <?= json_encode($page) ?>
+    };
 
     // AJAX load function
     function loadTable(params) {
@@ -45,9 +50,31 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(url)
             .then(r => r.text())
             .then(html => {
-                tableBody.innerHTML = html;
-                attachPaginationLinks();
+                const { rowsHtml, pagination } = parsePagination(html);
+                tableBody.innerHTML = rowsHtml;
+                if (pagination) {
+                    paginationState = pagination;
+                }
+                renderPagination();
             });
+    }
+
+    // Extract pagination object from AJAX response
+    function parsePagination(html) {
+        let pagination = null;
+        const scriptMatch = html.match(/<script[^>]*>[\s\S]*?<\/script>/i);
+        if (scriptMatch) {
+            const objMatch = scriptMatch[0].match(/window\.ajaxPagination\s*=\s*({[\s\S]*?})/);
+            if (objMatch && objMatch[1]) {
+                try {
+                    pagination = Function('return ' + objMatch[1])();
+                } catch (e) {
+                    // Ignore parse errors; fallback to previous pagination state
+                }
+            }
+            html = html.replace(scriptMatch[0], '');
+        }
+        return { rowsHtml: html, pagination };
     }
 
     // Gather current filter/search/page params
@@ -58,27 +85,64 @@ document.addEventListener('DOMContentLoaded', function() {
         return params;
     }
 
-    // Debounced search
+    // Debounced search resets to first page
     const debouncedSearch = debounce(function() {
+        paginationState.currentPage = 1;
         loadTable(getParams(1));
     }, 300);
 
     searchInput.addEventListener('input', debouncedSearch);
 
-    // AJAX pagination using data-page
-    function attachPaginationLinks() {
-        tableBody.querySelectorAll('.pagination .page-link[data-page]').forEach(link => {
-            if (link.classList.contains('disabled') || link.classList.contains('current')) return;
+    // Render pagination buttons and wire clicks
+    function renderPagination() {
+        const totalPages = Math.max(1, paginationState.totalPages || 1);
+        const currentPage = Math.max(1, Math.min(paginationState.currentPage || 1, totalPages));
+
+        if (totalPages <= 1) {
+            paginationContainer.innerHTML = '';
+            return;
+        }
+
+        let html = '';
+
+        // Prev
+        if (currentPage > 1) {
+            html += '<a href="#" class="page-link" data-page="' + (currentPage - 1) + '">&laquo; Previous</a> ';
+        } else {
+            html += '<span class="page-link disabled">&laquo; Previous</span> ';
+        }
+
+        // Page numbers
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === currentPage) {
+                html += '<span class="page-link current">' + i + '</span> ';
+            } else {
+                html += '<a href="#" class="page-link" data-page="' + i + '">' + i + '</a> ';
+            }
+        }
+
+        // Next
+        if (currentPage < totalPages) {
+            html += '<a href="#" class="page-link" data-page="' + (currentPage + 1) + '">Next &raquo;</a>';
+        } else {
+            html += '<span class="page-link disabled">Next &raquo;</span>';
+        }
+
+        paginationContainer.innerHTML = html;
+
+        paginationContainer.querySelectorAll('.page-link[data-page]').forEach(link => {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
-                const page = link.getAttribute('data-page') || 1;
-                loadTable(getParams(page));
+                const targetPage = parseInt(link.getAttribute('data-page'), 10) || 1;
+                paginationState.currentPage = targetPage;
+                loadTable(getParams(targetPage));
             });
         });
     }
 
-    // Initial attach for first page
-    attachPaginationLinks();
+    // Initial render for first page and fetch fresh data
+    renderPagination();
+    loadTable(getParams(1));
 
     // AJAX for filter change (category/status)
     form.querySelectorAll('select').forEach(sel => {
@@ -310,6 +374,39 @@ h1 {
     padding: 24px;
 }
 
+/* PAGINATION */
+.pagination {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin: 18px 0;
+    flex-wrap: wrap;
+}
+
+.pagination a,
+.pagination span {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    color: #333;
+}
+
+.pagination .page-link.current {
+    background: #800000;
+    color: #fff;
+    border-color: #800000;
+}
+
+.pagination .page-link.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 @media (max-width: 700px) {
     .summary-cards {
         flex-direction: column;
@@ -456,69 +553,7 @@ h1 {
 </table>
 
 <!-- PAGINATION CONTROLS -->
-<?php if ($totalPages > 1): ?>
-<div style="margin: 24px 0; text-align: center;">
-    <nav class="pagination">
-        <?php
-        // Build base URL with filters/search
-        $query = $_GET;
-        unset($query['page']);
-        $baseUrl = strtok($_SERVER['REQUEST_URI'], '?');
-        $queryStr = http_build_query($query);
-        $linkBase = $baseUrl . ($queryStr ? '?' . $queryStr . '&' : '?') . 'page=';
-
-        // Previous
-        if ($page > 1) {
-            echo '<a href="' . htmlspecialchars($linkBase . ($page - 1)) . '" class="page-link" data-page="' . ($page - 1) . '">&laquo; Previous</a> ';
-        } else {
-            echo '<span class="page-link disabled">&laquo; Previous</span> ';
-        }
-
-        // Page numbers
-        for ($i = 1; $i <= $totalPages; $i++) {
-            if ($i == $page) {
-                echo '<span class="page-link current">' . $i . '</span> ';
-            } else {
-                echo '<a href="' . htmlspecialchars($linkBase . $i) . '" class="page-link" data-page="' . $i . '">' . $i . '</a> ';
-            }
-        }
-
-        // Next
-        if ($page < $totalPages) {
-            echo '<a href="' . htmlspecialchars($linkBase . ($page + 1)) . '" class="page-link" data-page="' . ($page + 1) . '">Next &raquo;</a>';
-        } else {
-            echo '<span class="page-link disabled">Next &raquo;</span>';
-        }
-        ?>
-    </nav>
-</div>
-<?php endif; ?>
-</style>
-<style>
-.pagination .page-link {
-    display: inline-block;
-    margin: 0 3px;
-    padding: 6px 12px;
-    border-radius: 6px;
-    background: #f9eaea;
-    color: #800000;
-    text-decoration: none;
-    font-weight: 600;
-    border: 1px solid #f3caca;
-    min-width: 32px;
-}
-.pagination .page-link.current {
-    background: #800000;
-    color: #fff;
-    border: 1px solid #800000;
-}
-.pagination .page-link.disabled {
-    background: #f7f7fa;
-    color: #bbb;
-    border: 1px solid #eee;
-    cursor: not-allowed;
-}
-</style>
+<div id="pagination" class="pagination"></div>
 
 </div>
 </body>

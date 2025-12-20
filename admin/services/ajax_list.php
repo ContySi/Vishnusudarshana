@@ -12,10 +12,9 @@ $category = $_GET['category'] ?? 'All';
 $page     = max(1, (int)($_GET['page'] ?? 1));
 
 /* ===============================
-   PAGINATION
+    PAGINATION
 =============================== */
 $perPage = 10;
-$offset  = ($page - 1) * $perPage;
 
 /* ===============================
    FILTER LOGIC
@@ -43,7 +42,18 @@ if ($search !== '') {
 $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
 /* ===============================
-   QUERY
+    COUNT
+=============================== */
+$countSql = "SELECT COUNT(*) FROM service_requests $whereSql";
+$countStmt = $pdo->prepare($countSql);
+$countStmt->execute($params);
+$totalRecords = (int)$countStmt->fetchColumn();
+$totalPages = max(1, (int)ceil($totalRecords / $perPage));
+$page = min($page, $totalPages);
+$offset  = ($page - 1) * $perPage;
+
+/* ===============================
+    QUERY
 =============================== */
 $sql = "
     SELECT id, tracking_id, customer_name, mobile,
@@ -76,7 +86,6 @@ $catMap = [
 =============================== */
 if (!$requests) {
     echo '<tr><td colspan="10" class="no-data">No service requests found.</td></tr>';
-    exit;
 }
 
 foreach ($requests as $row) {
@@ -106,8 +115,8 @@ foreach ($requests as $row) {
     echo '<td>' . htmlspecialchars($row['tracking_id']) . '</td>';
     echo '<td>' . htmlspecialchars($row['customer_name']) . '</td>';
     echo '<td>' . htmlspecialchars($row['mobile']) . '</td>';
-    echo '<td>' . htmlspecialchars($categoryText) . '</td>';
     echo '<td>' . htmlspecialchars($products) . '</td>';
+    echo '<td>' . htmlspecialchars($categoryText) . '</td>';
     echo '<td>₹' . number_format($row['total_amount'], 2) . '</td>';
 
     $payClass = 'payment-' . strtolower(str_replace(' ', '-', $row['payment_status']));
@@ -120,3 +129,6 @@ foreach ($requests as $row) {
     echo '<td><a class="view-btn" href="view.php?id=' . (int)$row['id'] . '">View</a></td>';
     echo '</tr>';
 }
+
+// Append pagination metadata for client-side rendering
+echo '<script>window.ajaxPagination = { currentPage: ' . json_encode($page) . ', totalPages: ' . json_encode($totalPages) . ' };</script>';
