@@ -3,6 +3,7 @@ require_once 'header.php';
 $category = $_GET['category'] ?? '';
 
 $categories = [
+    'appointment' => 'Appointment Booking',
     'birth-child' => 'Birth & Child Services',
     'marriage-matching' => 'Marriage & Matching',
     'astrology-consultation' => 'Astrology Consultation',
@@ -26,6 +27,12 @@ $commonFields = [
 ];
 
 $categoryFields = [
+    'appointment' => [
+        ['label' => 'Preferred Date', 'name' => 'preferred_date', 'type' => 'date', 'required' => true],
+        ['label' => 'Preferred Time Slot', 'name' => 'preferred_time', 'type' => 'text', 'required' => true],
+        ['label' => 'Consultation Type', 'name' => 'consultation_type', 'type' => 'select', 'options' => ['Online', 'In-person'], 'required' => true],
+        ['label' => 'Topic', 'name' => 'topic', 'type' => 'select', 'options' => ['Astrology', 'Vastu', 'Rituals', 'General Guidance', 'Other'], 'required' => true],
+    ],
     'birth-child' => [
         ['label' => 'Child Name', 'name' => 'child_name', 'type' => 'text', 'required' => false],
         ['label' => 'Date of Birth', 'name' => 'dob', 'type' => 'date', 'required' => true],

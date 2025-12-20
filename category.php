@@ -3,6 +3,19 @@ require_once 'header.php';
 $category = $_GET['category'] ?? '';
 
 $categories = [
+    'appointment' => [
+        'title' => 'Appointment Booking',
+        'description' => 'Schedule an online or offline appointment with Pandit Ji for personal consultation on astrology, vastu, rituals, or spiritual guidance.',
+        'services' => [
+            'Online Consultation',
+            'In-person Consultation',
+            'Astrology Guidance',
+            'Vastu Advice',
+            'Ritual Planning',
+        ],
+        'delivery' => 'Online or In-person',
+        'type' => 'Paid Appointment',
+    ],
     'birth-child' => [
         'title' => 'Birth & Child Services',
         'description' => 'These services are designed for newborns and children. They help parents understand the child’s birth chart, choose auspicious names, and get spiritual guidance for the child’s future.',
@@ -225,6 +238,7 @@ body {
         <div class="detail-icon-large">
             <?php // Use same icon as services.php for each category
             $icons = [
+                'appointment' => '📅',
                 'birth-child' => '👶',
                 'marriage-matching' => '💍',
                 'astrology-consultation' => '🗣️',

@@ -24,6 +24,8 @@ $name            = trim($_POST['name'] ?? ($_POST['full_name'] ?? ''));
 $phone           = trim($_POST['phone'] ?? ($_POST['mobile'] ?? ''));
 $email           = trim($_POST['email'] ?? '');
 $notes           = trim($_POST['notes'] ?? '');
+$productIds      = $_POST['product_ids'] ?? [];
+$quantities      = $_POST['qty'] ?? [];
 
 // 2b) Validate required fields
 $errors = [];
@@ -47,6 +49,9 @@ if ($phone === '') {
 }
 if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
 	$errors[] = 'email is invalid';
+}
+if (empty($productIds) || !is_array($productIds)) {
+	$errors[] = 'Please select at least one service';
 }
 
 if (!empty($errors)) {
@@ -136,7 +141,15 @@ try {
 
 	$appointmentId = (int)$pdo->lastInsertId();
 
-	// 5) Redirect (PRG) based on appointment_type
+	// 5) Store product selection in session for payment flow
+	if (!empty($productIds) && is_array($productIds)) {
+		$_SESSION['appointment_products'] = [
+			'product_ids' => $productIds,
+			'quantities' => $quantities,
+		];
+	}
+
+	// 6) Redirect (PRG) based on appointment_type
 	if ($appointmentType === 'online') {
 		redirect_to('payment-init.php?source=appointment&appointment_id=' . urlencode((string)$appointmentId));
 	} else {

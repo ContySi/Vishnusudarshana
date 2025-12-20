@@ -45,13 +45,76 @@ $date = date('Ymd');
 $rand = strtoupper(bin2hex(random_bytes(3)));
 $tracking_id = "VDSK-$date-$rand";
 
-// Step 5: Save service_requests
+// Step 5: Save service_requests or update appointment
 $pending = $_SESSION['pending_payment'] ?? [];
 if (empty($pending)) {
     echo '<main class="main-content"><h2>No pending payment data found.</h2><a href="services.php" class="review-back-link">&larr; Back to Home</a></main>';
     require_once 'footer.php';
     exit;
 }
+
+$paymentSource = $pending['source'] ?? 'service';
+
+if ($paymentSource === 'appointment') {
+    // Update appointment payment status
+    $appointmentId = $pending['appointment_id'] ?? null;
+    if ($appointmentId) {
+        // Check if updated_at column exists
+        $hasUpdatedAt = false;
+        try {
+            $colCheck = $pdo->query("SHOW COLUMNS FROM appointments LIKE 'updated_at'");
+            $hasUpdatedAt = (bool)$colCheck->fetch();
+        } catch (Throwable $e) {
+            // Column check failed, assume it doesn't exist
+        }
+        
+        // Update appointment: mark payment as paid, keep status as pending
+        if ($hasUpdatedAt) {
+            $stmt = $pdo->prepare("UPDATE appointments SET payment_status = 'paid', transaction_ref = ?, updated_at = NOW() WHERE id = ?");
+        } else {
+            $stmt = $pdo->prepare("UPDATE appointments SET payment_status = 'paid', transaction_ref = ? WHERE id = ?");
+        }
+        $stmt->execute([$payment_id, $appointmentId]);
+        
+        $trackingId = 'APT-' . str_pad($appointmentId, 6, '0', STR_PAD_LEFT);
+        $customer = $pending['customer_details'] ?? [];
+        $customerName = $customer['full_name'] ?? '';
+        $mobile = $customer['mobile'] ?? '';
+        
+        // Clear session
+        unset($_SESSION['pending_payment']);
+        unset($_SESSION['appointment_products']);
+        
+        // Display appointment confirmation
+        ?>
+<main class="main-content">
+    <h1 class="review-title">Payment Successful!</h1>
+    <div class="review-card" style="text-align:center;">
+        <h2 class="section-title">Appointment Confirmed</h2>
+        <div style="font-size:1.3em;font-weight:700;color:#800000;letter-spacing:1px;margin:18px 0 12px 0;">
+            <?php echo htmlspecialchars($trackingId); ?>
+        </div>
+        <div style="color:#333;margin-bottom:18px;">Your appointment payment is received. We will contact you shortly to confirm the final time slot.</div>
+        <a href="services.php" class="pay-btn" style="display:inline-block;width:auto;padding:12px 28px;">Back to Services</a>
+    </div>
+</main>
+<?php require_once 'footer.php'; ?>
+<style>
+.main-content { max-width: 480px; margin: 0 auto; background: #fff; border-radius: 18px; box-shadow: 0 4px 24px #e0bebe33; padding: 18px 12px 28px 12px; }
+.review-title { font-size: 1.18em; font-weight: bold; margin-bottom: 18px; text-align: center; }
+.review-card { background: #f9eaea; border-radius: 14px; box-shadow: 0 2px 8px #e0bebe33; padding: 16px; margin-bottom: 18px; }
+.section-title { font-size: 1.05em; color: #800000; margin-bottom: 10px; font-weight: 600; }
+.pay-btn { background: #800000; color: #fff; border: none; border-radius: 8px; padding: 14px 0; font-size: 1.08em; font-weight: 600; margin-top: 10px; cursor: pointer; box-shadow: 0 2px 8px #80000022; transition: background 0.15s; text-decoration:none; }
+.pay-btn:active { background: #5a0000; }
+.review-back-link { display:block;text-align:center;margin-top:18px;color:#1a8917;font-size:0.98em;text-decoration:none; }
+@media (max-width: 700px) { .main-content { padding: 8px 2px 16px 2px; border-radius: 0; } }
+</style>
+        <?php
+        exit;
+    }
+}
+
+// Original service payment flow
 // Extract and map data
 $category = $pending['category_slug'] ?? $pending['category'] ?? '';
 $customer = $pending['customer_details'] ?? [];
