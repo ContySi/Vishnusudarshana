@@ -4,11 +4,12 @@
 
 include_once '../../header.php';
 include_once '../sidebar.php';
-    <div class="main-content">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-12">
-                    <h1 class="page-title">Appointment Management</h1>
+?>
+<div class="main-content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="page-title">Appointment Management</h1>
 <?php
 require_once __DIR__ . '/../../config/db.php';
 
