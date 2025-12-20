@@ -209,13 +209,9 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
     <?php
     exit;
 }
-                </div>
-            </div>
-        </div>
-    </div>
-    <?php include_once '../../footer.php'; ?>
-    <!-- JS Includes -->
-    <script src="../../assets/js/language.js"></script>
-    <!-- Add any other JS includes from index.php here -->
+<?php include_once '../../footer.php'; ?>
+<!-- JS Includes -->
+<script src="../../assets/js/language.js"></script>
+<!-- Add any other JS includes from index.php here -->
 </body>
 </html>
