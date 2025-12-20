@@ -4,20 +4,6 @@
 
 include_once '../../header.php';
 include_once '../sidebar.php';
-    <?php
-    exit;
-}
-// ...existing code...
-?>
-                </div>
-            </div>
-        </div>
-    </div>
-    <?php include_once '../../footer.php'; ?>
-    <!-- JS Includes -->
-    <script src="../../assets/js/language.js"></script>
-    <!-- Add any other JS includes from index.php here -->
-</body>
     <div class="main-content">
         <div class="container-fluid">
             <div class="row">
