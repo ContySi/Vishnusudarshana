@@ -205,6 +205,7 @@ h1.page-title {
     </div>
 </div>
 
+<script>
 document.addEventListener('DOMContentLoaded', function () {
 
     function loadAppointments(date) {
@@ -233,7 +234,8 @@ document.addEventListener('DOMContentLoaded', function () {
             alert('Acceptance logic will be added next (Phase-1 continuation).');
         }
     });
-});
+}); 
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     function loadAppointments(date) {
@@ -262,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-<?php include_once '../../footer.php'; ?>
+
 <script src="../../assets/js/language.js"></script>
 </body>
 </html>
