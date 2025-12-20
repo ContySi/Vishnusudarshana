@@ -1,13 +1,17 @@
-
 <?php
 // admin/services/appointmentmanagement.php
+
 require_once __DIR__ . '/../../config/db.php';
 
-// ==========================
-// AJAX REQUEST HANDLER FIRST
-// ==========================
+/**
+ * ==========================
+ * AJAX REQUEST HANDLER FIRST
+ * ==========================
+ */
 if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
+
     $selectedDate = $_GET['date'] ?? '';
+
     $appointments = [];
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
         $stmt = $pdo->prepare("
@@ -22,9 +26,6 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
         $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     ?>
-    <style>
-    <?php include __DIR__ . '/../../assets/css/style.css'; ?>
-    </style>
     <form id="acceptAppointmentsForm">
         <table class="service-table">
             <thead>
@@ -72,13 +73,13 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
             <?php endif; ?>
             </tbody>
         </table>
+
         <?php if ($appointments): ?>
             <div style="margin-top:18px;text-align:right;">
                 <button type="submit" class="view-btn">Accept Appointments</button>
             </div>
         <?php endif; ?>
     </form>
-    <script src="../../assets/js/language.js"></script>
     <?php
     exit;
 }
@@ -90,17 +91,6 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
  */
 
 
-?><!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Appointment Management</title>
-    <link rel="stylesheet" href="../../assets/css/style.css">
-</head>
-<body>
-<?php include_once '../../header.php'; ?>
-<?php include_once '../sidebar.php'; ?>
 
 /* Fetch pending paid appointment dates */
 $stmt = $pdo->prepare("
@@ -125,28 +115,93 @@ if (isset($_GET['date'])) {
 }
 ?>
 
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f7f7fa;
+    margin: 0;
+}
+.main-content {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 12px;
+}
+h1.page-title {
+    color: #800000;
+    margin-bottom: 18px;
+}
+.service-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    box-shadow: 0 2px 12px #e0bebe22;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.service-table th,
+.service-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #f3caca;
+    text-align: left;
+}
+.service-table th {
+    background: #f9eaea;
+    color: #800000;
+}
+.service-table tbody tr:hover {
+    background: #f3f7fa;
+    cursor: pointer;
+}
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9em;
+    display: inline-block;
+    min-width: 80px;
+    text-align: center;
+}
+.status-pending { background: #fffbe5; color: #b36b00; }
+.payment-paid { background: #e5ffe5; color: #1a8917; }
+.no-data {
+    text-align: center;
+    color: #777;
+    padding: 24px;
+}
+.view-btn {
+    background: #800000;
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+}
+@media (max-width: 700px) {
+    .main-content { padding: 8px 2px 16px 2px; border-radius: 0; }
+}
+</style>
+
 <div class="main-content">
-    <div class="container-fluid">
-        <h1 class="page-title">Appointment Management</h1>
-
-        <div style="margin-bottom:18px;">
-            <?php if ($dates): ?>
-                <label><strong>Select Date:</strong></label>
-                <select id="dateSelect" style="padding:6px 12px;border-radius:6px;">
-                    <?php foreach ($dates as $d): ?>
-                        <option value="<?= $d['preferred_date'] ?>" <?= $selectedDate === $d['preferred_date'] ? 'selected' : '' ?>>
-                            <?= date('d M Y', strtotime($d['preferred_date'])) ?> (<?= $d['count'] ?>)
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            <?php else: ?>
-                <span>No pending appointments.</span>
-            <?php endif; ?>
-        </div>
-
-        <div id="appointmentTableContainer">
-            <!-- AJAX table loads here -->
-        </div>
+    <h1 class="page-title">Appointment Management</h1>
+    <div style="margin-bottom:18px;">
+        <?php if ($dates): ?>
+            <label><strong>Select Date:</strong></label>
+            <select id="dateSelect" style="padding:6px 12px;border-radius:6px;">
+                <?php foreach ($dates as $d): ?>
+                    <option value="<?= $d['preferred_date'] ?>" <?= $selectedDate === $d['preferred_date'] ? 'selected' : '' ?>>
+                        <?= date('d M Y', strtotime($d['preferred_date'])) ?> (<?= $d['count'] ?>)
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        <?php else: ?>
+            <span>No pending appointments.</span>
+        <?php endif; ?>
+    </div>
+    <div id="appointmentTableContainer">
+        <!-- AJAX table loads here -->
     </div>
 </div>
 
@@ -179,7 +234,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 });
-<script src="../../assets/js/language.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     function loadAppointments(date) {
@@ -209,5 +263,6 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <?php include_once '../../footer.php'; ?>
+<script src="../../assets/js/language.js"></script>
 </body>
 </html>
