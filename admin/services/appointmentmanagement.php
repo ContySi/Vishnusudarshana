@@ -1,17 +1,13 @@
+
 <?php
 // admin/services/appointmentmanagement.php
-
 require_once __DIR__ . '/../../config/db.php';
 
-/**
- * ==========================
- * AJAX REQUEST HANDLER FIRST
- * ==========================
- */
+// ==========================
+// AJAX REQUEST HANDLER FIRST
+// ==========================
 if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
-
     $selectedDate = $_GET['date'] ?? '';
-
     $appointments = [];
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
         $stmt = $pdo->prepare("
@@ -26,6 +22,9 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
         $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     ?>
+    <style>
+    <?php include __DIR__ . '/../../assets/css/style.css'; ?>
+    </style>
     <form id="acceptAppointmentsForm">
         <table class="service-table">
             <thead>
@@ -73,13 +72,13 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
             <?php endif; ?>
             </tbody>
         </table>
-
         <?php if ($appointments): ?>
             <div style="margin-top:18px;text-align:right;">
                 <button type="submit" class="view-btn">Accept Appointments</button>
             </div>
         <?php endif; ?>
     </form>
+    <script src="../../assets/js/language.js"></script>
     <?php
     exit;
 }
@@ -90,8 +89,18 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
  * ==========================
  */
 
-include_once '../../header.php';
-include_once '../sidebar.php';
+
+?><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointment Management</title>
+    <link rel="stylesheet" href="../../assets/css/style.css">
+</head>
+<body>
+<?php include_once '../../header.php'; ?>
+<?php include_once '../sidebar.php'; ?>
 
 /* Fetch pending paid appointment dates */
 $stmt = $pdo->prepare("
@@ -141,7 +150,6 @@ if (isset($_GET['date'])) {
     </div>
 </div>
 
-<script>
 document.addEventListener('DOMContentLoaded', function () {
 
     function loadAppointments(date) {
@@ -171,9 +179,35 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 });
+<script src="../../assets/js/language.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    function loadAppointments(date) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', 'appointmentmanagement.php?ajax=1&date=' + encodeURIComponent(date));
+        xhr.onload = function () {
+            if (xhr.status === 200) {
+                document.getElementById('appointmentTableContainer').innerHTML = xhr.responseText;
+            }
+        };
+        xhr.send();
+    }
+    var dateSelect = document.getElementById('dateSelect');
+    if (dateSelect) {
+        loadAppointments(dateSelect.value);
+        dateSelect.addEventListener('change', function () {
+            loadAppointments(this.value);
+        });
+    }
+    document.addEventListener('submit', function (e) {
+        if (e.target.id === 'acceptAppointmentsForm') {
+            e.preventDefault();
+            alert('Acceptance logic will be added next (Phase-1 continuation).');
+        }
+    });
+});
 </script>
 
 <?php include_once '../../footer.php'; ?>
-<script src="../../assets/js/language.js"></script>
 </body>
 </html>
