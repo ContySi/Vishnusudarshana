@@ -29,6 +29,7 @@ $quantities      = $_POST['qty'] ?? [];
 // Primary product selection (for single product_id storage)
 $primaryProductId = $_POST['product_id'] ?? (is_array($productIds) && count($productIds) ? $productIds[0] : null);
 
+
 // 2b) Validate required fields
 $errors = [];
 if (!($serviceId !== null && $serviceId !== '' && ctype_digit((string)$serviceId))) {
@@ -68,6 +69,17 @@ if ($hasProductIdCol) {
 	// Legacy path: require any selection for downstream payment/init
 	if (empty($productIds) || !is_array($productIds)) {
 		$errors[] = 'Please select at least one service';
+	}
+}
+
+// IST time validation for preferred_date
+if ($preferredDate !== '') {
+	date_default_timezone_set('Asia/Kolkata');
+	$now = new DateTime('now', new DateTimeZone('Asia/Kolkata'));
+	$today = $now->format('Y-m-d');
+	$hour = (int)$now->format('H');
+	if ($preferredDate === $today && $hour >= 18) {
+		$errors[] = 'Today cannot be selected after 6:00 PM IST. Please choose a future date.';
 	}
 }
 

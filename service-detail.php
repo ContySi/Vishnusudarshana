@@ -4,38 +4,65 @@ require_once __DIR__ . '/config/db.php';
 
 $service = isset($_GET['service']) ? trim($_GET['service']) : '';
 
-$services = [
-    'book-appointment' => [
-        'title' => 'Book an Appointment',
-        'icon' => '📅',
-        'description' => 'Schedule an online or offline appointment. We will review your preferred slot and confirm the final time window.',
-    ],
-];
 
-$defaultService = [
-    'title' => 'Service Details',
-    'icon' => '🕉️',
-    'description' => 'Service information will appear here.',
-];
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Set min date to today, max date to +30 days
+    var dateInput = document.getElementById('preferred_date');
+    if (!dateInput) return;
+    var now = new Date();
+    var istOffset = 5.5 * 60 * 60 * 1000;
+    var nowIST = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + istOffset);
+    var yyyy = nowIST.getFullYear();
+    var mm = String(nowIST.getMonth() + 1).padStart(2, '0');
+    var dd = String(nowIST.getDate()).padStart(2, '0');
+    var todayStr = yyyy + '-' + mm + '-' + dd;
+    var maxDate = new Date(nowIST.getTime() + 30 * 24 * 60 * 60 * 1000);
+    var maxStr = maxDate.toISOString().slice(0, 10);
+    dateInput.setAttribute('min', todayStr);
+    dateInput.setAttribute('max', maxStr);
 
-$serviceData = $services[$service] ?? $defaultService;
+    // --- Custom logic: check backend for today slot availability after 6 PM IST ---
+    function checkTodayAvailability(callback) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', 'api/check_today_slot.php', true);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                try {
+                    var resp = JSON.parse(xhr.responseText);
+                    callback(resp && resp.available === true);
+                } catch (e) { callback(false); }
+            }
+        };
+        xhr.send();
+    }
 
-// Fetch appointment products from database
-$products = [];
-if ($service === 'book-appointment') {
-    $stmt = $pdo->prepare('SELECT * FROM products WHERE category_slug = ? AND is_active = 1 ORDER BY price ASC');
-    $stmt->execute(['appointment']);
-    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($serviceData['title']); ?> - Service Details</title>
-    <style>
-body {
+    if (nowIST.getHours() >= 18) {
+        checkTodayAvailability(function (isAvailable) {
+            if (!isAvailable) {
+                // Disable today in date picker
+                dateInput.addEventListener('focus', function () {
+                    var opts = dateInput.querySelectorAll('option');
+                    opts.forEach(function (opt) {
+                        if (opt.value === todayStr) opt.disabled = true;
+                    });
+                });
+                if (dateInput.value === todayStr) {
+                    dateInput.value = '';
+                }
+                // Set min to tomorrow
+                var tomorrow = new Date(nowIST.getTime() + 24 * 60 * 60 * 1000);
+                var tyyyy = tomorrow.getFullYear();
+                var tmm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+                var tdd = String(tomorrow.getDate()).padStart(2, '0');
+                dateInput.setAttribute('min', tyyyy + '-' + tmm + '-' + tdd);
+            } else {
+                // Today is available, do nothing (allow selection)
+            }
+        });
+    }
+});
+</script>
     font-family: Arial, sans-serif;
     margin: 0;
     background: linear-gradient(135deg, #f7e7e7 0%, #f7f7fa 100%);
@@ -205,7 +232,7 @@ body {
             </div>
             <div class="form-row">
                 <label>Preferred Date</label>
-                <input type="date" name="preferred_date" required>
+                <input type="date" name="preferred_date" id="preferredDateInput" required>
             </div>
             <div class="form-row">
                 <label>Preferred Time Window</label>
@@ -217,6 +244,44 @@ body {
             </div>
             
             <!-- Product Selection -->
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // IST = UTC+5:30
+                function getISTDateObj() {
+                    var now = new Date();
+                    // get UTC ms + 5.5h in ms
+                    var istOffset = 5.5 * 60 * 60 * 1000;
+                    var istNow = new Date(now.getTime() + (istOffset - now.getTimezoneOffset() * 60000));
+                    return istNow;
+                }
+                var dateInput = document.getElementById('preferredDateInput');
+                if (dateInput) {
+                    var istNow = getISTDateObj();
+                    var yyyy = istNow.getFullYear();
+                    var mm = String(istNow.getMonth() + 1).padStart(2, '0');
+                    var dd = String(istNow.getDate()).padStart(2, '0');
+                    var todayStr = yyyy + '-' + mm + '-' + dd;
+                    var hour = istNow.getHours();
+                    var minDate = todayStr;
+                    if (hour >= 18) {
+                        // After 18:00 IST, min selectable is next day
+                        var nextDay = new Date(istNow.getTime() + 24*60*60*1000);
+                        var nY = nextDay.getFullYear();
+                        var nM = String(nextDay.getMonth() + 1).padStart(2, '0');
+                        var nD = String(nextDay.getDate()).padStart(2, '0');
+                        minDate = nY + '-' + nM + '-' + nD;
+                        dateInput.min = minDate;
+                        dateInput.value = minDate;
+                        dateInput.setAttribute('disabled-today', '1');
+                    } else {
+                        // Before 18:00 IST, today is allowed
+                        dateInput.min = todayStr;
+                        dateInput.value = todayStr;
+                        dateInput.removeAttribute('disabled-today');
+                    }
+                }
+            });
+            </script>
             <?php if (!empty($products)): ?>
             <div class="form-row">
                 <label>Select Service(s) <span style="color:#d00;">*</span></label>

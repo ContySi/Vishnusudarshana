@@ -78,8 +78,8 @@ if ($paymentSource === 'appointment') {
         // Legacy update path or duplicate prevention
         $hasUpdatedAt = false;
         try { $colCheck = $pdo->query("SHOW COLUMNS FROM appointments LIKE 'updated_at'"); $hasUpdatedAt = (bool)$colCheck->fetch(); } catch (Throwable $e) {}
-        // Auto-attach logic for new paid appointments
         // Only for new insert (not update)
+        // Refined: Only auto-accept if a slot is available
         if ($isNewAppointment && isset($appointmentData['preferred_date'])) {
             $date = $appointmentData['preferred_date'];
             // Get all accepted appointments for this date, ordered by assigned_from_time
@@ -92,16 +92,14 @@ if ($paymentSource === 'appointment') {
             // Determine available window from form (if any)
             $windowStart = '09:00:00';
             $windowEnd = '18:00:00';
-            // Try to get from appointmentData (if present)
             if (!empty($appointmentData['time_from']) && !empty($appointmentData['time_to'])) {
                 $windowStart = $appointmentData['time_from'];
                 $windowEnd = $appointmentData['time_to'];
             }
-            // Default slot duration: 30 min
             $slotDuration = 30 * 60;
-            // Find next available slot
             $nextStart = strtotime($windowStart);
             $end = strtotime($windowEnd);
+            $slotAssigned = false;
             foreach ($slots as $s) {
                 $slotS = strtotime($s[0]);
                 $slotE = strtotime($s[1]);
@@ -114,6 +112,7 @@ if ($paymentSource === 'appointment') {
                 // Assign slot and mark as accepted
                 $assignStmt = $pdo->prepare("UPDATE appointments SET assigned_date = ?, assigned_from_time = ?, assigned_to_time = ?, status = 'accepted' WHERE id = ?");
                 $assignStmt->execute([$date, $assigned_from, $assigned_to, $newAppointmentId]);
+                $slotAssigned = true;
                 // WhatsApp notification on acceptance
                 try {
                     $custStmt = $pdo->prepare("SELECT customer_name, mobile FROM appointments WHERE id = ?");
@@ -133,9 +132,7 @@ if ($paymentSource === 'appointment') {
                         );
                     }
                 } catch (Throwable $e) { error_log('WhatsApp appointment acceptance failed: ' . $e->getMessage()); }
-            } else {
-                // No slot available, keep as pending
-            }
+            } // else: No slot available, keep as pending
         }
         $stmt = $hasUpdatedAt
             ? $pdo->prepare("UPDATE appointments SET payment_status = 'paid', transaction_ref = ?, updated_at = NOW() WHERE id = ?")
