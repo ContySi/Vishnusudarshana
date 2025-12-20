@@ -7,17 +7,14 @@ require_once __DIR__ . '/config/db.php';
 $source = $_GET['source'] ?? '';
 $appointmentId = $_GET['appointment_id'] ?? null;
 
-if ($source === 'appointment' && $appointmentId) {
-    // Appointment payment flow
-    $stmt = $pdo->prepare("SELECT * FROM appointments WHERE id = ?");
-    $stmt->execute([$appointmentId]);
-    $appointment = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if (!$appointment) {
-        echo '<main class="main-content"><h2>Appointment not found</h2>';
-        echo '<a href="services.php" class="review-back-link">&larr; Back to Services</a></main>';
-        require_once 'footer.php';
-        exit;
+if ($source === 'appointment') {
+    // Appointment payment flow: prefer session data; fallback to existing record when id given
+    $pending = $_SESSION['pending_payment'] ?? [];
+    $appointment = null;
+    if ($appointmentId) {
+        $stmt = $pdo->prepare("SELECT * FROM appointments WHERE id = ?");
+        $stmt->execute([$appointmentId]);
+        $appointment = $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
     // Prefer product_id on appointment if column exists
@@ -96,19 +93,83 @@ if ($source === 'appointment' && $appointmentId) {
         }
     }
     
-    $_SESSION['pending_payment'] = [
-        'source' => 'appointment',
-        'appointment_id' => $appointmentId,
-        'customer_details' => [
+    if (!empty($pending) && ($pending['source'] ?? '') === 'appointment' && !$appointmentId) {
+        // Build from session appointment_form
+        $customer = $pending['customer_details'] ?? [];
+        $form = $pending['appointment_form'] ?? [];
+        $sel = $pending['products_selection'] ?? [];
+        $selected_products = [];
+        $total_amount = 0;
+        $productIds = $sel['product_ids'] ?? [];
+        $quantities = $sel['quantities'] ?? [];
+
+        if (!empty($productIds)) {
+            $placeholders = implode(',', array_fill(0, count($productIds), '?'));
+            $productStmt = $pdo->prepare("SELECT * FROM products WHERE id IN ($placeholders) AND is_active = 1");
+            $productStmt->execute($productIds);
+            $products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($products as $product) {
+                $pid = $product['id'];
+                $qty = isset($quantities[$pid]) ? max(1, intval($quantities[$pid])) : 1;
+                $line_total = $product['price'] * $qty;
+                $selected_products[] = [
+                    'id' => $pid,
+                    'name' => $product['product_name'],
+                    'desc' => $product['short_description'],
+                    'price' => $product['price'],
+                    'qty' => $qty,
+                    'line_total' => $line_total
+                ];
+                $total_amount += $line_total;
+            }
+        }
+        if (empty($selected_products)) {
+            $productStmt = $pdo->query("SELECT * FROM products WHERE (category_slug = 'appointment' OR category = 'appointment') AND is_active = 1 ORDER BY price ASC LIMIT 1");
+            $appointmentProduct = $productStmt->fetch(PDO::FETCH_ASSOC);
+            if ($appointmentProduct) {
+                $selected_products[] = [
+                    'id' => $appointmentProduct['id'],
+                    'name' => $appointmentProduct['product_name'],
+                    'desc' => $appointmentProduct['short_description'] ?? '',
+                    'price' => $appointmentProduct['price'],
+                    'qty' => 1,
+                    'line_total' => $appointmentProduct['price']
+                ];
+                $total_amount = $appointmentProduct['price'];
+            } else {
+                echo '<main class="main-content"><h2>No appointment services available</h2>';
+                echo '<p>Please contact support to complete your appointment booking.</p>';
+                echo '<a href="services.php" class="review-back-link">&larr; Back to Services</a></main>';
+                require_once 'footer.php';
+                exit;
+            }
+        }
+        $_SESSION['pending_payment'] = [
+            'source' => 'appointment',
+            'customer_details' => $customer,
+            'appointment_form' => $form,
+            'products' => $selected_products,
+            'total_amount' => $total_amount
+        ];
+    } else {
+        // Existing record path (legacy)
+        if (!$appointment) {
+            echo '<main class="main-content"><h2>Appointment not found</h2>';
+            echo '<a href="services.php" class="review-back-link">&larr; Back to Services</a></main>';
+            require_once 'footer.php';
+            exit;
+        }
+        // Build from stored appointment with product_id preference
+        $customer = [
             'full_name' => $appointment['customer_name'],
-            'mobile' => $appointment['mobile'],
-            'email' => $appointment['email'] ?? ''
-        ],
-        'products' => $selected_products,
-        'total_amount' => $total_amount
-    ];
-    
-    $customer = $_SESSION['pending_payment']['customer_details'];
+            'mobile'    => $appointment['mobile'],
+            'email'     => $appointment['email'] ?? ''
+        ];
+        // selected_products and total_amount are prepared by existing logic below
+    }
+    // For UI after preparing session
+    $pending = $_SESSION['pending_payment'] ?? [];
+    $customer = $pending['customer_details'] ?? $customer ?? [];
 } else {
     // Existing service payment flow
     $category = $_POST['category'] ?? '';
@@ -191,6 +252,29 @@ if ($source === 'appointment' && $appointmentId) {
         </div>
     </div>
     <?php if ($source === 'appointment'): ?>
+    <div class="review-card">
+        <h2 class="section-title">Appointment Details</h2>
+        <div class="details-list">
+            <?php 
+            $appointmentForm = $pending['appointment_form'] ?? [];
+            $appointmentType = $appointmentForm['appointment_type'] ?? 'online';
+            $preferredDate = $appointmentForm['preferred_date'] ?? '';
+            $preferredTime = $appointmentForm['preferred_time'] ?? '';
+            ?>
+            <div class="details-row">
+                <span class="details-label">Appointment Type:</span>
+                <span class="details-value"><?php echo htmlspecialchars(ucfirst($appointmentType)); ?></span>
+            </div>
+            <div class="details-row">
+                <span class="details-label">Preferred Date:</span>
+                <span class="details-value"><?php echo htmlspecialchars($preferredDate); ?></span>
+            </div>
+            <div class="details-row">
+                <span class="details-label">Preferred Time:</span>
+                <span class="details-value"><?php echo htmlspecialchars($preferredTime); ?></span>
+            </div>
+        </div>
+    </div>
     <div class="review-card">
         <h2 class="section-title">Selected Services</h2>
         <?php if (!empty($selected_products)): ?>

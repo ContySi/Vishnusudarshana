@@ -145,7 +145,7 @@ body {
 .product-price { color: #1a8917; font-weight: 600; font-size: 1.08em; margin-top: 6px; }
 .qty-controls { display: flex; align-items: center; gap: 4px; }
 .qty-btn { background: #f5faff; border: 1px solid #e0bebe; color: #800000; border-radius: 50%; width: 22px; height: 22px; font-size: 1em; cursor: pointer; }
-.qty-input { width: 32px; text-align: center; border: 1px solid #e0bebe; border-radius: 6px; padding: 2px 0; font-size: 1em; }
+.qty-input { width: 40px; text-align: center; border: 1px solid #e0bebe; border-radius: 6px; padding: 4px 2px; font-size: 0.95em; background: #fff; color: #333; }
 .line-total { font-size: 0.98em; color: #800000; font-weight: 600; min-width: 60px; text-align: right; }
 .selected-total { background: #f9eaea; border-radius: 10px; padding: 12px; text-align: right; font-size: 1.13em; color: #800000; font-weight: 600; margin: 10px 0; }
 @media (max-width: 700px) {
@@ -184,6 +184,38 @@ body {
         <form class="appointment-form" method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'] ? dirname($_SERVER['PHP_SELF']) : ''); ?>/appointment-process.php" id="appointmentForm">
             <input type="hidden" name="service_id" value="0">
             
+            <div class="form-row">
+                <label>Full Name</label>
+                <input type="text" name="full_name" required>
+            </div>
+            <div class="form-row">
+                <label>Mobile Number</label>
+                <input type="tel" name="mobile" required>
+            </div>
+            <div class="form-row">
+                <label>Email (optional)</label>
+                <input type="email" name="email">
+            </div>
+            <div class="form-row">
+                <label>Appointment Type</label>
+                <div class="inline-options">
+                    <label><input type="radio" name="appointment_type" value="online" required> Online</label>
+                    <label><input type="radio" name="appointment_type" value="offline" required> Offline</label>
+                </div>
+            </div>
+            <div class="form-row">
+                <label>Preferred Date</label>
+                <input type="date" name="preferred_date" required>
+            </div>
+            <div class="form-row">
+                <label>Preferred Time Window</label>
+                <input type="text" name="preferred_time" placeholder="e.g., 10:00 AM - 12:00 PM" required>
+            </div>
+            <div class="form-row">
+                <label>Notes</label>
+                <textarea name="notes" rows="3" placeholder="Share any details or questions"></textarea>
+            </div>
+            
             <!-- Product Selection -->
             <?php if (!empty($products)): ?>
             <div class="form-row">
@@ -216,37 +248,6 @@ body {
             </div>
             <?php endif; ?>
             
-            <div class="form-row">
-                <label>Full Name</label>
-                <input type="text" name="full_name" required>
-            </div>
-            <div class="form-row">
-                <label>Mobile Number</label>
-                <input type="tel" name="mobile" required>
-            </div>
-            <div class="form-row">
-                <label>Email (optional)</label>
-                <input type="email" name="email">
-            </div>
-            <div class="form-row">
-                <label>Appointment Type</label>
-                <div class="inline-options">
-                    <label><input type="radio" name="appointment_type" value="online" required> Online</label>
-                    <label><input type="radio" name="appointment_type" value="offline" required> Offline</label>
-                </div>
-            </div>
-            <div class="form-row">
-                <label>Preferred Date</label>
-                <input type="date" name="preferred_date" required>
-            </div>
-            <div class="form-row">
-                <label>Preferred Time Window</label>
-                <input type="text" name="preferred_time" placeholder="e.g., 10:00 AM - 12:00 PM" required>
-            </div>
-            <div class="form-row">
-                <label>Notes</label>
-                <textarea name="notes" rows="3" placeholder="Share any details or questions"></textarea>
-            </div>
             <button type="submit" class="proceed-btn maroon-btn" id="submitBtn">Submit Request</button>
         </form>
         <div class="cat-helper-text">We will review your request and confirm the final appointment slot. Online appointments require payment after confirmation.</div>

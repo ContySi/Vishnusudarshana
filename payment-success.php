@@ -56,37 +56,86 @@ if (empty($pending)) {
 $paymentSource = $pending['source'] ?? 'service';
 
 if ($paymentSource === 'appointment') {
-    // Update appointment payment status
+    // Insert appointment record post-payment or update legacy record
     $appointmentId = $pending['appointment_id'] ?? null;
+    $customer = $pending['customer_details'] ?? [];
+    $form = $pending['appointment_form'] ?? [];
+    $customerName = $customer['full_name'] ?? '';
+    $mobile = $customer['mobile'] ?? '';
+    $email = $customer['email'] ?? '';
+
+    // Check for duplicate payment_id to prevent duplicate appointments
+    if (!$appointmentId) {
+        $dupCheck = $pdo->prepare("SELECT id FROM appointments WHERE transaction_ref = ?");
+        $dupCheck->execute([$payment_id]);
+        $existing = $dupCheck->fetch(PDO::FETCH_ASSOC);
+        if ($existing) {
+            $appointmentId = $existing['id'];
+        }
+    }
+
     if ($appointmentId) {
-        // Check if updated_at column exists
+        // Legacy update path or duplicate prevention
         $hasUpdatedAt = false;
-        try {
-            $colCheck = $pdo->query("SHOW COLUMNS FROM appointments LIKE 'updated_at'");
-            $hasUpdatedAt = (bool)$colCheck->fetch();
-        } catch (Throwable $e) {
-            // Column check failed, assume it doesn't exist
-        }
-        
-        // Update appointment: mark payment as paid, keep status as pending
-        if ($hasUpdatedAt) {
-            $stmt = $pdo->prepare("UPDATE appointments SET payment_status = 'paid', transaction_ref = ?, updated_at = NOW() WHERE id = ?");
-        } else {
-            $stmt = $pdo->prepare("UPDATE appointments SET payment_status = 'paid', transaction_ref = ? WHERE id = ?");
-        }
+        try { $colCheck = $pdo->query("SHOW COLUMNS FROM appointments LIKE 'updated_at'"); $hasUpdatedAt = (bool)$colCheck->fetch(); } catch (Throwable $e) {}
+        $stmt = $hasUpdatedAt
+            ? $pdo->prepare("UPDATE appointments SET payment_status = 'paid', transaction_ref = ?, updated_at = NOW() WHERE id = ?")
+            : $pdo->prepare("UPDATE appointments SET payment_status = 'paid', transaction_ref = ? WHERE id = ?");
         $stmt->execute([$payment_id, $appointmentId]);
-        
-        $trackingId = 'APT-' . str_pad($appointmentId, 6, '0', STR_PAD_LEFT);
-        $customer = $pending['customer_details'] ?? [];
-        $customerName = $customer['full_name'] ?? '';
-        $mobile = $customer['mobile'] ?? '';
-        
-        // Clear session
-        unset($_SESSION['pending_payment']);
-        unset($_SESSION['appointment_products']);
-        
-        // Display appointment confirmation
-        ?>
+    } else {
+        // New path: insert appointment now that payment succeeded
+        $hasServiceId = false; $hasProductId = false; $hasUpdatedAt = false;
+        try { $hasServiceId = (bool)$pdo->query("SHOW COLUMNS FROM appointments LIKE 'service_id'")->fetch(); } catch (Throwable $e) {}
+        try { $hasProductId = (bool)$pdo->query("SHOW COLUMNS FROM appointments LIKE 'product_id'")->fetch(); } catch (Throwable $e) {}
+        try { $hasUpdatedAt = (bool)$pdo->query("SHOW COLUMNS FROM appointments LIKE 'updated_at'")->fetch(); } catch (Throwable $e) {}
+
+        $baseCols = ['customer_name','mobile','email','appointment_type','preferred_date','preferred_time_slot','notes','status','payment_status','transaction_ref'];
+        $cols = $baseCols; $params = [
+            ':customer_name' => $customerName,
+            ':mobile'        => $mobile,
+            ':email'         => $email ?: null,
+            ':type'          => $form['appointment_type'] ?? 'online',
+            ':pdate'         => $form['preferred_date'] ?? date('Y-m-d'),
+            ':ptime'         => $form['preferred_time'] ?? '',
+            ':notes'         => $form['notes'] ?? null,
+            ':status'        => 'pending',
+            ':pstatus'       => 'paid',
+            ':txref'         => $payment_id,
+        ];
+        if ($hasServiceId && !empty($form['service_id'])) { $cols = array_merge(['service_id'],$cols); $params[':service_id'] = (int)$form['service_id']; }
+        if ($hasProductId && !empty($form['product_id'])) { $cols = array_merge(['product_id'],$cols); $params[':product_id'] = (int)$form['product_id']; }
+
+        $columnsSql = implode(', ', $cols);
+        $placeholdersSql = implode(', ', array_map(function($c){
+            switch($c){
+                case 'service_id': return ':service_id';
+                case 'product_id': return ':product_id';
+                case 'customer_name': return ':customer_name';
+                case 'mobile': return ':mobile';
+                case 'email': return ':email';
+                case 'appointment_type': return ':type';
+                case 'preferred_date': return ':pdate';
+                case 'preferred_time_slot': return ':ptime';
+                case 'notes': return ':notes';
+                case 'status': return ':status';
+                case 'payment_status': return ':pstatus';
+                case 'transaction_ref': return ':txref';
+                default: return ':' . $c;
+            }
+        }, $cols));
+
+        $sql = "INSERT INTO appointments ($columnsSql) VALUES ($placeholdersSql)";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $appointmentId = (int)$pdo->lastInsertId();
+    }
+
+    $trackingId = 'APT-' . str_pad($appointmentId, 6, '0', STR_PAD_LEFT);
+    // Clear session
+    unset($_SESSION['pending_payment']);
+    unset($_SESSION['appointment_products']);
+
+    ?>
 <main class="main-content">
     <h1 class="review-title">Payment Successful!</h1>
     <div class="review-card" style="text-align:center;">
@@ -112,7 +161,7 @@ if ($paymentSource === 'appointment') {
         <?php
         exit;
     }
-}
+
 
 // Original service payment flow
 // Extract and map data

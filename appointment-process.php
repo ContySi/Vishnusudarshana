@@ -124,85 +124,103 @@ $hasServiceId = table_has_column($pdo, 'appointments', 'service_id');
 $hasProductIdCol = $hasProductIdCol || table_has_column($pdo, 'appointments', 'product_id');
 
 // 4) Prepare values and insert with prepared statements
-$paymentStatus = ($appointmentType === 'online') ? 'paid' : 'unpaid';
+$paymentStatus = ($appointmentType === 'online') ? 'pending' : 'unpaid';
 
 try {
-	if ($hasServiceId && $hasProductIdCol) {
-		$stmt = $pdo->prepare("INSERT INTO appointments 
-			(service_id, product_id, customer_name, mobile, email, appointment_type, preferred_date, preferred_time_slot, notes, status, payment_status)
-			VALUES (:service_id, :product_id, :name, :mobile, :email, :type, :pdate, :ptime, :notes, 'pending', :pstatus)");
-		$stmt->execute([
-			':service_id' => (int)$serviceId,
-			':product_id' => (int)$primaryProductId,
-			':name'       => $name,
-			':mobile'     => $phone,
-			':email'      => $email ?: null,
-			':type'       => $appointmentType,
-			':pdate'      => $preferredDate,
-			':ptime'      => $preferredTime,
-			':notes'      => $notes ?: null,
-			':pstatus'    => $paymentStatus,
-		]);
-	} elseif ($hasServiceId && !$hasProductIdCol) {
-		$stmt = $pdo->prepare("INSERT INTO appointments 
-			(service_id, customer_name, mobile, email, appointment_type, preferred_date, preferred_time_slot, notes, status, payment_status)
-			VALUES (:service_id, :name, :mobile, :email, :type, :pdate, :ptime, :notes, 'pending', :pstatus)");
-		$stmt->execute([
-			':service_id' => (int)$serviceId,
-			':name'       => $name,
-			':mobile'     => $phone,
-			':email'      => $email ?: null,
-			':type'       => $appointmentType,
-			':pdate'      => $preferredDate,
-			':ptime'      => $preferredTime,
-			':notes'      => $notes ?: null,
-			':pstatus'    => $paymentStatus,
-		]);
-	} elseif (!$hasServiceId && $hasProductIdCol) {
-		$stmt = $pdo->prepare("INSERT INTO appointments 
-			(product_id, customer_name, mobile, email, appointment_type, preferred_date, preferred_time_slot, notes, status, payment_status)
-			VALUES (:product_id, :name, :mobile, :email, :type, :pdate, :ptime, :notes, 'pending', :pstatus)");
-		$stmt->execute([
-			':product_id' => (int)$primaryProductId,
-			':name'       => $name,
-			':mobile'     => $phone,
-			':email'      => $email ?: null,
-			':type'       => $appointmentType,
-			':pdate'      => $preferredDate,
-			':ptime'      => $preferredTime,
-			':notes'      => $notes ?: null,
-			':pstatus'    => $paymentStatus,
-		]);
-	} else {
-		$stmt = $pdo->prepare("INSERT INTO appointments 
-			(customer_name, mobile, email, appointment_type, preferred_date, preferred_time_slot, notes, status, payment_status)
-			VALUES (:name, :mobile, :email, :type, :pdate, :ptime, :notes, 'pending', :pstatus)");
-		$stmt->execute([
-			':name'    => $name,
-			':mobile'  => $phone,
-			':email'   => $email ?: null,
-			':type'    => $appointmentType,
-			':pdate'   => $preferredDate,
-			':ptime'   => $preferredTime,
-			':notes'   => $notes ?: null,
-			':pstatus' => $paymentStatus,
-		]);
-	}
-
-	$appointmentId = (int)$pdo->lastInsertId();
-
-	// 5) Store product selection in session for payment flow (legacy)
-	if (!$hasProductIdCol && !empty($productIds) && is_array($productIds)) {
-		$_SESSION['appointment_products'] = [
-			'product_ids' => $productIds,
-			'quantities' => $quantities,
-		];
-	}
-
-	// 6) Redirect (PRG) based on appointment_type
 	if ($appointmentType === 'online') {
-		redirect_to('payment-init.php?source=appointment&appointment_id=' . urlencode((string)$appointmentId));
+		// Do NOT insert yet; save in session and redirect to payment-init
+		$_SESSION['pending_payment'] = [
+			'source' => 'appointment',
+			'category' => 'appointment',
+			'customer_details' => [
+				'full_name' => $name,
+				'mobile'    => $phone,
+				'email'     => $email,
+			],
+			'appointment_form' => [
+				'service_id'       => $hasServiceId ? (int)$serviceId : null,
+				'product_id'       => $hasProductIdCol ? (int)$primaryProductId : null,
+				'appointment_type' => $appointmentType,
+				'preferred_date'   => $preferredDate,
+				'preferred_time'   => $preferredTime,
+				'notes'            => $notes,
+			],
+			'products_selection' => [
+				'product_ids' => is_array($productIds) ? $productIds : [],
+				'quantities'  => is_array($quantities) ? $quantities : [],
+			],
+		];
+		redirect_to('payment-init.php?source=appointment');
 	} else {
+		// Offline flow unchanged: insert immediately
+		if ($hasServiceId && $hasProductIdCol) {
+			$stmt = $pdo->prepare("INSERT INTO appointments 
+				(service_id, product_id, customer_name, mobile, email, appointment_type, preferred_date, preferred_time_slot, notes, status, payment_status)
+				VALUES (:service_id, :product_id, :name, :mobile, :email, :type, :pdate, :ptime, :notes, 'pending', :pstatus)");
+			$stmt->execute([
+				':service_id' => (int)$serviceId,
+				':product_id' => (int)$primaryProductId,
+				':name'       => $name,
+				':mobile'     => $phone,
+				':email'      => $email ?: null,
+				':type'       => $appointmentType,
+				':pdate'      => $preferredDate,
+				':ptime'      => $preferredTime,
+				':notes'      => $notes ?: null,
+				':pstatus'    => $paymentStatus,
+			]);
+		} elseif ($hasServiceId && !$hasProductIdCol) {
+			$stmt = $pdo->prepare("INSERT INTO appointments 
+				(service_id, customer_name, mobile, email, appointment_type, preferred_date, preferred_time_slot, notes, status, payment_status)
+				VALUES (:service_id, :name, :mobile, :email, :type, :pdate, :ptime, :notes, 'pending', :pstatus)");
+			$stmt->execute([
+				':service_id' => (int)$serviceId,
+				':name'       => $name,
+				':mobile'     => $phone,
+				':email'      => $email ?: null,
+				':type'       => $appointmentType,
+				':pdate'      => $preferredDate,
+				':ptime'      => $preferredTime,
+				':notes'      => $notes ?: null,
+				':pstatus'    => $paymentStatus,
+			]);
+		} elseif (!$hasServiceId && $hasProductIdCol) {
+			$stmt = $pdo->prepare("INSERT INTO appointments 
+				(product_id, customer_name, mobile, email, appointment_type, preferred_date, preferred_time_slot, notes, status, payment_status)
+				VALUES (:product_id, :name, :mobile, :email, :type, :pdate, :ptime, :notes, 'pending', :pstatus)");
+			$stmt->execute([
+				':product_id' => (int)$primaryProductId,
+				':name'       => $name,
+				':mobile'     => $phone,
+				':email'      => $email ?: null,
+				':type'       => $appointmentType,
+				':pdate'      => $preferredDate,
+				':ptime'      => $preferredTime,
+				':notes'      => $notes ?: null,
+				':pstatus'    => $paymentStatus,
+			]);
+		} else {
+			$stmt = $pdo->prepare("INSERT INTO appointments 
+				(customer_name, mobile, email, appointment_type, preferred_date, preferred_time_slot, notes, status, payment_status)
+				VALUES (:name, :mobile, :email, :type, :pdate, :ptime, :notes, 'pending', :pstatus)");
+			$stmt->execute([
+				':name'    => $name,
+				':mobile'  => $phone,
+				':email'   => $email ?: null,
+				':type'    => $appointmentType,
+				':pdate'   => $preferredDate,
+				':ptime'   => $preferredTime,
+				':notes'   => $notes ?: null,
+				':pstatus' => $paymentStatus,
+			]);
+		}
+		$appointmentId = (int)$pdo->lastInsertId();
+		if (!$hasProductIdCol && !empty($productIds) && is_array($productIds)) {
+			$_SESSION['appointment_products'] = [
+				'product_ids' => $productIds,
+				'quantities' => $quantities,
+			];
+		}
 		redirect_to('service-detail.php?service=book-appointment&submitted=1&appointment_id=' . urlencode((string)$appointmentId));
 	}
 } catch (Throwable $e) {
