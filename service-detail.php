@@ -3,8 +3,7 @@ require_once 'header.php';
 require_once __DIR__ . '/config/db.php';
 
 $service = isset($_GET['service']) ? trim($_GET['service']) : '';
-
-
+?>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     // Set min date to today, max date to +30 days
