@@ -82,6 +82,7 @@ unset($fields);
     <h1 class="form-title"><?php echo htmlspecialchars($categories[$category]); ?> — Service Form</h1>
     <?php if ($category === 'appointment'): ?>
     <form method="post" action="service-review.php?category=<?php echo urlencode($category); ?>" class="service-form" autocomplete="off" id="appointmentForm">
+        <input type="hidden" name="category" value="<?php echo htmlspecialchars($category); ?>">
         <section class="form-section">
             <h2 class="form-section-title">Appointment Details</h2>
             <div class="form-group">
@@ -159,6 +160,7 @@ unset($fields);
     </script>
     <?php else: ?>
     <form method="post" action="service-review.php?category=<?php echo urlencode($category); ?>" class="service-form" autocomplete="off">
+        <input type="hidden" name="category" value="<?php echo htmlspecialchars($category); ?>">
         <section class="form-section">
             <h2 class="form-section-title">Your Details</h2>
             <?php foreach ($commonFields as $field): ?>

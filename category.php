@@ -283,7 +283,7 @@ body {
     </section>
     <!-- Proceed Button -->
     <section class="detail-section" style="text-align:center;">
-           <a class="proceed-btn maroon-btn" href="service-form.php?category=appointment">Proceed</a>
+        <a class="proceed-btn maroon-btn" href="service-form.php?category=<?php echo urlencode($category); ?>">Proceed</a>
         <div class="cat-helper-text">You will be asked to fill a simple form in the next step.</div>
     </section>
     <a href="services.php" style="display:block;text-align:center;margin-top:14px;color:#1a8917;font-size:0.98em;">&larr; Back to Services</a>

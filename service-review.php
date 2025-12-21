@@ -40,11 +40,24 @@ if ($category === 'appointment') {
     if ($date < $todayIST || $date > $maxDate) {
         $errors[] = 'Invalid preferred date.';
     }
-    // Validate product selection (on POST)
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $product_ids = $_POST['product_ids'] ?? [];
-        if (empty($product_ids) || !is_array($product_ids)) {
-            $errors[] = 'Please select at least one service.';
+    // For appointment, skip generic product selection validation
+    if ($category === 'appointment') {
+        if (empty($_SESSION['book_appointment']) && empty($form_data)) {
+            $errors[] = 'Appointment form data missing.';
+        }
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $product_ids = $_POST['product_ids'] ?? [];
+            if (empty($product_ids) || !is_array($product_ids)) {
+                $errors[] = 'Please select at least one appointment service.';
+            }
+        }
+    } else {
+        // Validate product selection (on POST) for other categories
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $product_ids = $_POST['product_ids'] ?? [];
+            if (empty($product_ids) || !is_array($product_ids)) {
+                $errors[] = 'Please select at least one service.';
+            }
         }
     }
     // Reject direct access without session data
