@@ -40,19 +40,7 @@ $pending = $_SESSION['pending_payment'] ?? [];
 // If session data is empty, try to retrieve from database (SOURCE OF TRUTH)
 if (empty($pending)) {
     // Create pending_payments table if not exists
-    $pdo->exec("CREATE TABLE IF NOT EXISTS pending_payments (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        payment_id VARCHAR(100) UNIQUE,
-        source VARCHAR(50),
-        customer_details JSON,
-        appointment_form JSON,
-        form_data JSON,
-        selected_products JSON,
-        category VARCHAR(50),
-        total_amount DECIMAL(10,2),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        expires_at TIMESTAMP DEFAULT (DATE_ADD(NOW(), INTERVAL 1 DAY))
-    );");
+    
     
     // Query database as source of truth when session is unavailable
     $stmt = $pdo->prepare("SELECT * FROM pending_payments WHERE payment_id = ?");
