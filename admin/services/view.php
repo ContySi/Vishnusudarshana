@@ -489,16 +489,22 @@ $adminNotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     </script>
 
-    <form class="form-bar" method="post">
-        <label for="service_status">Update Service Status:</label>
-        <select name="service_status" id="service_status">
-            <?php foreach ($statusOptions as $opt): ?>
-                <option value="<?php echo $opt; ?>" <?php if ($request['service_status'] === $opt) echo 'selected'; ?>><?php echo $opt; ?></option>
-            <?php endforeach; ?>
-        </select>
-        <button type="submit" name="update_status">Update</button>
-    </form>
-    <a href="index.php" style="color:#800000;text-decoration:underline;font-size:0.98em;">&larr; Back to List</a>
+    <?php if ($request['category_slug'] === 'appointment'): ?>
+        <div style="margin:18px 0 18px 0;font-weight:600;">
+            Service Status: <span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $request['service_status'])); ?>"><?php echo htmlspecialchars($request['service_status']); ?></span>
+        </div>
+    <?php else: ?>
+        <form class="form-bar" method="post">
+            <label for="service_status">Update Service Status:</label>
+            <select name="service_status" id="service_status">
+                <?php foreach ($statusOptions as $opt): ?>
+                    <option value="<?php echo $opt; ?>" <?php if ($request['service_status'] === $opt) echo 'selected'; ?>><?php echo $opt; ?></option>
+                <?php endforeach; ?>
+            </select>
+            <button type="submit" name="update_status">Update</button>
+        </form>
+        <a href="index.php" style="color:#800000;text-decoration:underline;font-size:0.98em;">&larr; Back to List</a>
+    <?php endif; ?>
 </div>
 </body>
 </html>
