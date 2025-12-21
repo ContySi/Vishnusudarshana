@@ -202,14 +202,6 @@ if ($category === 'appointment') {
     exit;
 }
 // ...existing code for other categories...
-            :form_data,
-            :selected_products,
-            :total_amount,
-            :payment_id,
-            :payment_status,
-            :service_status
-        )
-    ");
     $stmt->execute([
         ':tracking_id'       => $tracking_id,
         ':category_slug'     => $category,
