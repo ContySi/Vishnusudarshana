@@ -105,9 +105,25 @@ $stmt = $pdo->prepare("
 $stmt->execute();
 $completedAppointments = (int)$stmt->fetchColumn();
 
-// --- STRICT UNACCEPTED FILTER ---
+/* ============================================================
+    FETCH UNACCEPTED APPOINTMENT DATES (DATE(created_at))
+   ============================================================ */
+
 $pendingDates = [];
-$whereUnaccepted = "category_slug = 'appointment' AND payment_status = 'Paid' AND service_status = 'Received'";
+
+$whereUnaccepted = "
+    category_slug = 'appointment'
+    AND payment_status = 'Paid'
+    AND (
+        service_status IN ('Received','Pending')
+        OR (
+            service_status = 'Accepted'
+            AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(form_data,'$.assigned_date')), '') <> ''
+            AND JSON_UNQUOTE(JSON_EXTRACT(form_data,'$.assigned_date')) < CURDATE()
+        )
+    )
+";
+
 $stmt = $pdo->prepare("SELECT DATE(created_at) AS d, COUNT(*) AS c FROM service_requests WHERE $whereUnaccepted GROUP BY DATE(created_at) ORDER BY DATE(created_at) ASC");
 $stmt->execute();
 $dateRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -129,7 +145,12 @@ if (!empty($pendingDates)) {
     $selectedDate = null;
 }
 
+/* ============================================================
+    FETCH APPOINTMENTS FOR SELECTED DATE (Unaccepted criteria)
+   ============================================================ */
+
 $appointments = [];
+
 if ($selectedDate !== null) {
     $sqlList = "
         SELECT id, tracking_id, customer_name, mobile, email, payment_status, service_status, form_data, created_at
@@ -211,64 +232,60 @@ h1 {
     border-radius: 12px;
     overflow: hidden;
 }
-<table class="service-table">
-    <thead>
-        <tr>
-            <th><input type="checkbox" id="selectAll"></th>
-            <th>Tracking ID</th>
-            <th>Customer Name</th>
-            <th>Mobile</th>
-            <th>Email</th>
-            <th>Preferred Date</th>
-            <th>Assigned Date</th>
-            <th>Service Status</th>
-            <th>Created Date</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        <?php if (empty($appointments)): ?>
-            <tr>
-                <td colspan="10" class="no-data">No appointment bookings found.</td>
-            </tr>
-        <?php else: ?>
-            <?php foreach ($appointments as $a): ?>
-                <?php
-                    $formData = json_decode($a['form_data'], true) ?? [];
-                    $preferredDate = $formData['preferred_date'] ?? '';
-                    $assignedDate = $formData['assigned_date'] ?? '';
-                    $preferredDisplay = $preferredDate ? (DateTime::createFromFormat('Y-m-d', $preferredDate)?->format('d-M-Y') ?: $preferredDate) : '—';
-                    $assignedDisplay = $assignedDate ? (DateTime::createFromFormat('Y-m-d', $assignedDate)?->format('d-M-Y') ?: $assignedDate) : '—';
-                    $createdDisplay = '';
-                    if (!empty($a['created_at'])) {
-                        $co = new DateTime($a['created_at']);
-                        $createdDisplay = $co->format('d-M-Y');
-                    }
-                ?>
-                <tr>
-                    <td>
-                        <input type="checkbox" class="rowCheckbox" value="<?= (int)$a['id'] ?>" data-date="<?= htmlspecialchars($selectedDate) ?>">
-                    </td>
-                    <td><?= htmlspecialchars($a['tracking_id']) ?></td>
-                    <td><?= htmlspecialchars($a['customer_name']) ?></td>
-                    <td><?= htmlspecialchars($a['mobile']) ?></td>
-                    <td><?= htmlspecialchars($a['email']) ?></td>
-                    <td style="font-weight:600;color:#800000;">
-                        <?= htmlspecialchars($preferredDisplay) ?>
-                    </td>
-                    <td style="font-weight:600; color:#0056b3;">
-                        <?= htmlspecialchars($assignedDisplay) ?>
-                    </td>
-                    <td><span class="status-badge status-received">Unaccepted</span></td>
-                    <td><?= htmlspecialchars($createdDisplay) ?></td>
-                    <td>
-                        <a href="view.php?id=<?= (int)$a['id'] ?>" class="view-btn">View</a>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </tbody>
-</table>
+.service-table th,
+.service-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #f3caca;
+    text-align: left;
+}
+.service-table th {
+    background: #f9eaea;
+    color: #800000;
+}
+.service-table tbody tr:hover {
+    background: #f3f7fa;
+}
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9em;
+    display: inline-block;
+    min-width: 80px;
+    text-align: center;
+}
+.status-received { background: #e5f0ff; color: #0056b3; }
+.payment-paid { background: #e5ffe5; color: #1a8917; }
+.badge-overdue {
+    background: #ff4444;
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 600;
+    margin-left: 6px;
+}
+.no-data {
+    text-align: center;
+    color: #777;
+    padding: 24px;
+}
+/* Action Bar */
+.action-bar {
+    display: none;
+    background: #fff3cd;
+    border: 2px solid #ffc107;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    align-items: center;
+    gap: 12px;
+}
+.action-bar.show {
+    display: flex;
+}
+.action-bar-label {
+    font-weight: 600;
     color: #856404;
     margin-right: auto;
 }
@@ -666,23 +683,6 @@ if (selectAll) {
 document.querySelectorAll('.rowCheckbox').forEach(checkbox => {
     checkbox.addEventListener('change', updateActionBar);
 });
-
-// --- AUTO-REVERT OUTDATED ACCEPTED APPOINTMENTS ---
-$today = date('Y-m-d');
-$sqlRevert = "
-    UPDATE service_requests
-    SET service_status = 'Received',
-        form_data = JSON_REMOVE(form_data, '$.assigned_date', '$.assigned_from_time', '$.assigned_to_time'),
-        updated_at = NOW()
-    WHERE category_slug = 'appointment'
-      AND payment_status = 'Paid'
-      AND service_status = 'Accepted'
-      AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(form_data,'$.assigned_date')), '') <> ''
-      AND JSON_UNQUOTE(JSON_EXTRACT(form_data,'$.assigned_date')) < CURDATE()
-      AND service_status != 'Completed'
-";
-$pdo->exec($sqlRevert);
-
 </script>
 
 </body>
