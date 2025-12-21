@@ -74,19 +74,27 @@ $completedAppointments = (int)$stmt->fetchColumn();
 $pendingDates = [];
 
 $stmt = $pdo->prepare("
-    SELECT DATE(created_at) AS appointment_date, COUNT(*) AS total
+    SELECT form_data
     FROM service_requests
     WHERE category_slug = 'appointment'
       AND payment_status = 'Paid'
       AND service_status = 'Received'
-    GROUP BY DATE(created_at)
-    ORDER BY appointment_date ASC
 ");
 $stmt->execute();
 
 foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-    $pendingDates[$row['appointment_date']] = (int)$row['total'];
+    $formData = json_decode($row['form_data'], true) ?? [];
+    if (isset($formData['preferred_date']) && !empty($formData['preferred_date'])) {
+        $preferredDate = $formData['preferred_date'];
+        if (!isset($pendingDates[$preferredDate])) {
+            $pendingDates[$preferredDate] = 0;
+        }
+        $pendingDates[$preferredDate]++;
+    }
 }
+
+// Sort by date ascending
+ksort($pendingDates);
 
 /* ============================================================
    STEP 3.2 – AUTO-SELECT OLDEST PENDING DATE
@@ -124,11 +132,18 @@ if ($selectedDate !== null) {
         WHERE category_slug = 'appointment'
           AND payment_status = 'Paid'
           AND service_status = 'Received'
-          AND DATE(created_at) = ?
-        ORDER BY created_at ASC
     ");
-    $stmt->execute([$selectedDate]);
-    $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt->execute();
+    $allAppointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Filter by preferred_date from JSON
+    foreach ($allAppointments as $appointment) {
+        $formData = json_decode($appointment['form_data'], true) ?? [];
+        $preferredDate = $formData['preferred_date'] ?? '';
+        if ($preferredDate === $selectedDate) {
+            $appointments[] = $appointment;
+        }
+    }
 }
 ?>
 <!DOCTYPE html>
