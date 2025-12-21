@@ -1,5 +1,24 @@
 <?php
 require_once __DIR__ . '/../../config/db.php';
+
+// PHASE 2 – Appointment listing from service_requests (category_slug=appointment)
+
+// Fetch appointment bookings from service_requests table
+$sql = "
+    SELECT id, tracking_id, customer_name, mobile, email, payment_status, service_status, created_at
+    FROM service_requests
+    WHERE category_slug = 'appointment' AND payment_status = 'Paid'";
+
+// Optional: Add service_status filter if it exists
+if (isset($selectedStatus) && in_array($selectedStatus, ['Received', 'Pending'])) {
+    $sql .= " AND service_status IN ('Received', 'Pending')";
+}
+
+$sql .= " ORDER BY created_at ASC";
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute();
+$appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -28,81 +47,53 @@ h1 {
     margin-bottom: 24px;
     flex-wrap: wrap;
 }
-
-<!-- PHASE 2 – Appointment listing from service_requests (category_slug=appointment) -->
-
-<div class="summary-cards">
-    <div class="summary-card">
-        <div class="summary-count">0</div>
-        <div class="summary-label">Today’s Appointments</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-count">0</div>
-        <div class="summary-label">Pending</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-count">0</div>
-        <div class="summary-label">Accepted</div>
-    </div>
-    <div class="summary-card">
-        <div class="summary-count">0</div>
-        <div class="summary-label">Completed</div>
-    </div>
-</div>
-
-<div id="appointmentContainer">
-    <table class="service-table">
-        <thead>
-            <tr>
-                <th><input type="checkbox" id="selectAll"></th>
-                <th>Tracking ID</th>
-                <th>Customer Name</th>
-                <th>Mobile</th>
-                <th>Email</th>
-                <th>Payment Status</th>
-                <th>Service Status</th>
-                <th>Created Date</th>
-            </tr>
-        </thead>
-        <tbody>
-        <?php
-        // PHASE 2 – Appointment listing from service_requests (category_slug=appointment)
-        $query = "SELECT id, tracking_id, customer_name, mobile, email, payment_status, service_status, created_at FROM service_requests WHERE category_slug = 'appointment' AND payment_status = 'Paid' ORDER BY created_at ASC";
-        $stmt = $pdo->prepare($query);
-        $stmt->execute();
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        if (!$rows): ?>
-            <tr><td colspan="8" class="no-data">No appointment bookings found.</td></tr>
-        <?php else:
-            foreach ($rows as $row): ?>
-            <tr>
-                <td><input type="checkbox" class="row-checkbox" value="<?= htmlspecialchars($row['id']) ?>"></td>
-                <td><?= htmlspecialchars($row['tracking_id']) ?></td>
-                <td><?= htmlspecialchars($row['customer_name']) ?></td>
-                <td><?= htmlspecialchars($row['mobile']) ?></td>
-                <td><?= htmlspecialchars($row['email']) ?></td>
-                <td><span class="status-badge payment-<?= strtolower(str_replace(' ', '-', $row['payment_status'])) ?>"><?= htmlspecialchars($row['payment_status']) ?></span></td>
-                <td><span class="status-badge status-<?= strtolower(str_replace(' ', '-', $row['service_status'])) ?>"><?= htmlspecialchars($row['service_status']) ?></span></td>
-                <td><?= date('d-m-Y H:i', strtotime($row['created_at'])) ?></td>
-            </tr>
-        <?php endforeach;
-        endif; ?>
-        </tbody>
-    </table>
-</div>
-
-<script>
-// PHASE 2 – Select all feature
-document.addEventListener('DOMContentLoaded', function () {
-    const selectAll = document.getElementById('selectAll');
-    const checkboxes = document.querySelectorAll('.row-checkbox');
-    if (selectAll) {
-        selectAll.addEventListener('change', function () {
-            checkboxes.forEach(cb => { cb.checked = selectAll.checked; });
-        });
-    }
-});
-</script>
+.summary-card {
+    flex: 1 1 180px;
+    background: #fffbe7;
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+    box-shadow: 0 2px 8px #e0bebe22;
+}
+.summary-count {
+    font-size: 2.2em;
+    font-weight: 700;
+    color: #800000;
+}
+.summary-label {
+    font-size: 1em;
+    color: #444;
+}
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+.filter-bar label {
+    font-weight: 600;
+}
+.filter-bar select,
+.filter-bar button {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 1em;
+}
+.filter-bar button {
+    background: #800000;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+}
+.service-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    box-shadow: 0 2px 12px #e0bebe22;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.service-table th,
 .service-table td {
     padding: 12px 10px;
     border-bottom: 1px solid #f3caca;
@@ -206,27 +197,53 @@ document.addEventListener('DOMContentLoaded', function () {
     <input type="date" name="date" value="<?= htmlspecialchars($_GET['date'] ?? '') ?>" />
     <button type="submit">Apply</button>
 </form>
-<table class="service-table">
-<thead>
-<tr>
-    <th>ID</th>
-    <th>Customer</th>
-    <th>Mobile</th>
-    <th>Type</th>
-    <th>Date</th>
-    <th>Time Slot</th>
-    <th>Status</th>
-    <th>Created</th>
-    <th>Action</th>
-</tr>
-</thead>
-<tbody id="serviceTableBody">
-    <tr>
-        <td colspan="9" class="no-data">No appointments found.</td>
-    </tr>
-</tbody>
-</table>
+<div id="appointmentContainer">
+    <table class="service-table">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="selectAll" /></th>
+                <th>Tracking ID</th>
+                <th>Customer Name</th>
+                <th>Mobile</th>
+                <th>Email</th>
+                <th>Payment Status</th>
+                <th>Service Status</th>
+                <th>Created Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (empty($appointments)): ?>
+                <tr>
+                    <td colspan="8" class="no-data">No appointment bookings found.</td>
+                </tr>
+            <?php else: ?>
+                <?php foreach ($appointments as $appointment): ?>
+                    <tr>
+                        <td><input type="checkbox" value="<?= $appointment['id'] ?>" /></td>
+                        <td><?= htmlspecialchars($appointment['tracking_id']) ?></td>
+                        <td><?= htmlspecialchars($appointment['customer_name']) ?></td>
+                        <td><?= htmlspecialchars($appointment['mobile']) ?></td>
+                        <td><?= htmlspecialchars($appointment['email']) ?></td>
+                        <td class="status-<?= strtolower($appointment['payment_status']) ?>"><?= htmlspecialchars($appointment['payment_status']) ?></td>
+                        <td class="status-<?= strtolower($appointment['service_status']) ?>"><?= htmlspecialchars($appointment['service_status']) ?></td>
+                        <td><?= htmlspecialchars($appointment['created_at']) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </tbody>
+    </table>
+</div>
 <div id="pagination" class="pagination"></div>
 </div>
+<script>
+// Select/Deselect all checkboxes
+const selectAllCheckbox = document.getElementById('selectAll');
+selectAllCheckbox.addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('#appointmentContainer input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+    });
+});
+</script>
 </body>
 </html>
