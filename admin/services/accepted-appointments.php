@@ -1,4 +1,18 @@
-
+// --- AUTO-REVERT OUTDATED ACCEPTED APPOINTMENTS ---
+$today = date('Y-m-d');
+$sqlRevert = "
+    UPDATE service_requests
+    SET service_status = 'Received',
+        form_data = JSON_REMOVE(form_data, '$.assigned_date', '$.assigned_from_time', '$.assigned_to_time'),
+        updated_at = NOW()
+    WHERE category_slug = 'appointment'
+      AND payment_status = 'Paid'
+      AND service_status = 'Accepted'
+      AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(form_data,'$.assigned_date')), '') <> ''
+      AND JSON_UNQUOTE(JSON_EXTRACT(form_data,'$.assigned_date')) < CURDATE()
+      AND service_status != 'Completed'
+";
+$pdo->exec($sqlRevert);
 <?php
 /**
  * admin/services/accepted-appointments.php
@@ -144,6 +158,15 @@ h1 { color: #800000; margin-bottom: 18px; }
                 <?php endif; ?>
                 </tbody>
             </table>
+                                <td><?= htmlspecialchars($createdDisplay) ?></td>
+                                <td>
+                                    <a href="view.php?id=<?= (int)$a['id'] ?>" class="view-btn" style="padding:6px 14px;background:#007bff;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">View</a>
+                                </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                </tbody>
+            </table>
         </form>
     <?php endif; ?>
 </div>
@@ -179,23 +202,6 @@ function submitComplete() {
     });
     form.submit();
 }
-
-// --- AUTO-REVERT OUTDATED ACCEPTED APPOINTMENTS ---
-$today = date('Y-m-d');
-$sqlRevert = "
-    UPDATE service_requests
-    SET service_status = 'Received',
-        form_data = JSON_REMOVE(form_data, '$.assigned_date', '$.assigned_from_time', '$.assigned_to_time'),
-        updated_at = NOW()
-    WHERE category_slug = 'appointment'
-      AND payment_status = 'Paid'
-      AND service_status = 'Accepted'
-      AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(form_data,'$.assigned_date')), '') <> ''
-      AND JSON_UNQUOTE(JSON_EXTRACT(form_data,'$.assigned_date')) < CURDATE()
-      AND service_status != 'Completed'
-";
-$pdo->exec($sqlRevert);
-
 </script>
 </body>
 </html>
