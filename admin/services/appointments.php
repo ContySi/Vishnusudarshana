@@ -5,27 +5,6 @@ require_once __DIR__ . '/../../config/db.php';
 
 // PHASE 2.1 – Dynamic appointment statistics from service_requests
 
-// STEP 3.2 – Auto select oldest pending appointment date
-// If a valid date is provided in the query string and exists in $pendingDates, use it.
-// Otherwise, default to the oldest pending date. If none, set to null.
-if (isset($_GET['date']) && isset($pendingDates[$_GET['date']])) {
-    $selectedDate = $_GET['date'];
-} elseif (!empty($pendingDates)) {
-    // Fallback: select the oldest pending date (first key in sorted array)
-    $selectedDate = array_key_first($pendingDates);
-} else {
-    // No pending dates available
-    $selectedDate = null;
-}
-// STEP 3.1 – Fetch pending appointment dates (no UI changes yet)
-// This block fetches all dates that have PENDING appointments (service_status = 'Received')
-// and stores them as an associative array: [ 'YYYY-MM-DD' => count ]
-$pendingDates = [];
-$stmtPendingDates = $pdo->prepare("SELECT DATE(created_at) AS appointment_date, COUNT(*) AS total FROM service_requests WHERE category_slug = 'appointment' AND payment_status = 'Paid' AND service_status = 'Received' GROUP BY DATE(created_at) ORDER BY appointment_date ASC");
-$stmtPendingDates->execute();
-foreach ($stmtPendingDates->fetchAll(PDO::FETCH_ASSOC) as $row) {
-    $pendingDates[$row['appointment_date']] = (int)$row['total'];
-}
 
 // Total Appointments
 $stmtTotal = $pdo->prepare("SELECT COUNT(*) FROM service_requests WHERE category_slug = 'appointment' AND payment_status = 'Paid'");
@@ -78,6 +57,30 @@ if ($selectedDate !== null) {
 }
 $stmt->execute();
 $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
+// STEP 3.2 – Auto select oldest pending appointment date
+// If a valid date is provided in the query string and exists in $pendingDates, use it.
+// Otherwise, default to the oldest pending date. If none, set to null.
+if (isset($_GET['date']) && isset($pendingDates[$_GET['date']])) {
+    $selectedDate = $_GET['date'];
+} elseif (!empty($pendingDates)) {
+    // Fallback: select the oldest pending date (first key in sorted array)
+    $selectedDate = array_key_first($pendingDates);
+} else {
+    // No pending dates available
+    $selectedDate = null;
+}
+// STEP 3.1 – Fetch pending appointment dates (no UI changes yet)
+// This block fetches all dates that have PENDING appointments (service_status = 'Received')
+// and stores them as an associative array: [ 'YYYY-MM-DD' => count ]
+$pendingDates = [];
+$stmtPendingDates = $pdo->prepare("SELECT DATE(created_at) AS appointment_date, COUNT(*) AS total FROM service_requests WHERE category_slug = 'appointment' AND payment_status = 'Paid' AND service_status = 'Received' GROUP BY DATE(created_at) ORDER BY appointment_date ASC");
+$stmtPendingDates->execute();
+foreach ($stmtPendingDates->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    $pendingDates[$row['appointment_date']] = (int)$row['total'];
+}
+
 
 // STEP 3.6 – Auto fallback if selected date has no appointments
 // If no appointments for selected date and there are still pending dates, fallback to next oldest date (one time only)
