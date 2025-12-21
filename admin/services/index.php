@@ -163,21 +163,24 @@ require_once __DIR__ . '/../../config/db.php';
 
 /* ==============================
    SUMMARY COUNTS
+   VISIBILITY CONTROL: Exclude appointment records from dashboard stats
+   Appointments are managed separately in appointmentmanagement.php
+   Filter: category_slug != 'appointment' excludes all appointment data
 ============================== */
 $todayCount = $pdo->query(
-    "SELECT COUNT(*) FROM service_requests WHERE DATE(created_at) = CURDATE()"
+    "SELECT COUNT(*) FROM service_requests WHERE DATE(created_at) = CURDATE() AND category_slug != 'appointment'"
 )->fetchColumn();
 
 $receivedCount = $pdo->query(
-    "SELECT COUNT(*) FROM service_requests WHERE service_status = 'Received'"
+    "SELECT COUNT(*) FROM service_requests WHERE service_status = 'Received' AND category_slug != 'appointment'"
 )->fetchColumn();
 
 $inProgressCount = $pdo->query(
-    "SELECT COUNT(*) FROM service_requests WHERE service_status = 'In Progress'"
+    "SELECT COUNT(*) FROM service_requests WHERE service_status = 'In Progress' AND category_slug != 'appointment'"
 )->fetchColumn();
 
 $completedCount = $pdo->query(
-    "SELECT COUNT(*) FROM service_requests WHERE service_status = 'Completed'"
+    "SELECT COUNT(*) FROM service_requests WHERE service_status = 'Completed' AND category_slug != 'appointment'"
 )->fetchColumn();
 
 /* ==============================
