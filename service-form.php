@@ -80,6 +80,46 @@ unset($fields);
 ?>
 <main class="main-content">
     <h1 class="form-title"><?php echo htmlspecialchars($categories[$category]); ?> — Service Form</h1>
+    <?php if ($category === 'book-appointment'): ?>
+    <form method="post" action="service-review.php?category=book-appointment" class="service-form" autocomplete="off">
+        <section class="form-section">
+            <h2 class="form-section-title">Appointment Details</h2>
+            <div class="form-group">
+                <label>Full Name <span class="req">*</span></label>
+                <input type="text" name="full_name" required>
+            </div>
+            <div class="form-group">
+                <label>Mobile Number <span class="req">*</span></label>
+                <input type="tel" name="mobile" required>
+            </div>
+            <div class="form-group">
+                <label>Email (optional)</label>
+                <input type="email" name="email">
+            </div>
+            <div class="form-group">
+                <label>Appointment Type <span class="req">*</span></label>
+                <select name="appointment_type" required>
+                    <option value="">-- Select --</option>
+                    <option value="Online">Online</option>
+                    <option value="Offline">Offline</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Preferred Date <span class="req">*</span></label>
+                <input type="date" name="preferred_date" required>
+            </div>
+            <div class="form-group">
+                <label>Preferred Time Window <span class="req">*</span></label>
+                <input type="text" name="preferred_time" required>
+            </div>
+            <div class="form-group">
+                <label>Notes</label>
+                <textarea name="notes" rows="3"></textarea>
+            </div>
+        </section>
+        <button type="submit" class="form-submit-btn">Continue</button>
+    </form>
+    <?php else: ?>
     <form method="post" action="service-review.php?category=<?php echo urlencode($category); ?>" class="service-form" autocomplete="off">
         <section class="form-section">
             <h2 class="form-section-title">Your Details</h2>
@@ -115,6 +155,7 @@ unset($fields);
         </section>
         <button type="submit" class="form-submit-btn">Continue</button>
     </form>
+    <?php endif; ?>
     <a href="services.php" class="form-back-link">&larr; Back to Services</a>
 </main>
 <?php require_once 'footer.php'; ?>

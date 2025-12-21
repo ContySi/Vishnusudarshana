@@ -2,7 +2,18 @@
 require_once 'header.php';
 $category = $_GET['category'] ?? '';
 
+// Add new book-appointment category
 $categories = [
+    'book-appointment' => [
+        'title' => 'Book an Appointment',
+        'description' => 'Schedule an online or offline appointment with Pandit Ji',
+        'services' => [
+            'Online Appointment',
+            'Offline Appointment',
+        ],
+        'delivery' => 'Online or Offline',
+        'type' => 'Booking',
+    ],
     'appointment' => [
         'title' => 'Appointment Booking',
         'description' => 'Schedule an online or offline appointment with Pandit Ji for personal consultation on astrology, vastu, rituals, or spiritual guidance.',
@@ -238,6 +249,7 @@ body {
         <div class="detail-icon-large">
             <?php // Use same icon as services.php for each category
             $icons = [
+                'book-appointment' => '📅',
                 'appointment' => '📅',
                 'birth-child' => '👶',
                 'marriage-matching' => '💍',

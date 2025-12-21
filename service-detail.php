@@ -2,7 +2,32 @@
 require_once 'header.php';
 require_once __DIR__ . '/config/db.php';
 
+// Use category flow for service-detail
 $service = isset($_GET['service']) ? trim($_GET['service']) : '';
+$category = isset($_GET['category']) ? trim($_GET['category']) : '';
+
+// Service meta (icon, title, description)
+$serviceMeta = [
+    'book-appointment' => [
+        'icon' => '📅',
+        'title' => 'Book an Appointment',
+        'description' => 'Schedule an online or offline appointment; final slot confirmed by our team.'
+    ],
+    // Add more services as needed
+];
+$serviceData = $serviceMeta[$service] ?? [
+    'icon' => '',
+    'title' => 'Service Detail',
+    'description' => 'Service information not found.'
+];
+
+// Product fetch for appointment
+$products = [];
+if ($service === 'book-appointment') {
+    $stmt = $pdo->prepare('SELECT * FROM products WHERE category_slug = ? AND is_active = 1 ORDER BY price ASC');
+    $stmt->execute(['appointment']);
+    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 ?>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -209,8 +234,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <section class="detail-section">
         <h3>Appointment Form</h3>
-        <form class="appointment-form" method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'] ? dirname($_SERVER['PHP_SELF']) : ''); ?>/appointment-process.php" id="appointmentForm">
-            <input type="hidden" name="service_id" value="0">
+        <form class="appointment-form" method="post" action="service-review.php?category=appointment" id="appointmentForm">
+            <input type="hidden" name="service" value="book-appointment">
             
             <div class="form-row">
                 <label>Full Name</label>
@@ -221,23 +246,37 @@ document.addEventListener('DOMContentLoaded', function () {
                 <input type="tel" name="mobile" required>
             </div>
             <div class="form-row">
-                <label>Email (optional)</label>
+                <label>Email</label>
                 <input type="email" name="email">
             </div>
             <div class="form-row">
-                <label>Appointment Type</label>
-                <div class="inline-options">
-                    <label><input type="radio" name="appointment_type" value="online" required> Online</label>
-                    <label><input type="radio" name="appointment_type" value="offline" required> Offline</label>
-                </div>
+                <label>City / Location</label>
+                <input type="text" name="city" required>
             </div>
             <div class="form-row">
                 <label>Preferred Date</label>
                 <input type="date" name="preferred_date" id="preferredDateInput" required>
             </div>
             <div class="form-row">
-                <label>Preferred Time Window</label>
-                <input type="text" name="preferred_time" placeholder="e.g., 10:00 AM - 12:00 PM" required>
+                <label>Preferred Time Slot</label>
+                <input type="text" name="preferred_time" required>
+            </div>
+            <div class="form-row">
+                <label>Consultation Type</label>
+                <select name="consultation_type" required>
+                    <option value="Online">Online</option>
+                    <option value="In-person">In-person</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label>Topic</label>
+                <select name="topic" required>
+                    <option value="Astrology">Astrology</option>
+                    <option value="Vastu">Vastu</option>
+                    <option value="Rituals">Rituals</option>
+                    <option value="General Guidance">General Guidance</option>
+                    <option value="Other">Other</option>
+                </select>
             </div>
             <div class="form-row">
                 <label>Notes</label>

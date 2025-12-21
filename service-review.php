@@ -3,20 +3,71 @@ require_once 'header.php';
 require_once __DIR__ . '/config/db.php';
 
 // Step 2: Read input
+session_start();
 $category = $_GET['category'] ?? '';
 $form_data = $_POST ?? [];
 
-if (!$category || empty($form_data)) {
-    echo '<h2>Missing information</h2>';
-    echo '<p>Category and form data are required.</p>';
-    echo '<a href="services.php">&larr; Back to Services</a>';
-    exit;
+if ($category === 'book-appointment') {
+    // Validate session data
+    if (!empty($form_data)) {
+        $_SESSION['book_appointment'] = $form_data;
+    } else if (!empty($_SESSION['book_appointment'])) {
+        $form_data = $_SESSION['book_appointment'];
+    }
+    // Fetch products for both 'appointment' and 'book-appointment'
+    $stmt = $pdo->prepare('SELECT * FROM products WHERE (category_slug = ? OR category_slug = ?) AND is_active = 1 ORDER BY price ASC');
+    $stmt->execute(['appointment', 'book-appointment']);
+    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Backend validation
+    $required = ['full_name', 'mobile', 'appointment_type', 'preferred_date', 'preferred_time'];
+    $errors = [];
+    foreach ($required as $field) {
+        if (empty($form_data[$field]) || !is_string($form_data[$field]) || trim($form_data[$field]) === '') {
+            $errors[] = ucfirst(str_replace('_', ' ', $field)) . ' is required.';
+        }
+    }
+    // Validate appointment_type
+    $valid_types = ['Online', 'Offline'];
+    if (!in_array($form_data['appointment_type'] ?? '', $valid_types, true)) {
+        $errors[] = 'Invalid appointment type.';
+    }
+    // Validate date
+    $today = date('Y-m-d');
+    $maxDate = date('Y-m-d', strtotime('+30 days'));
+    $date = $form_data['preferred_date'] ?? '';
+    if ($date < $today || $date > $maxDate) {
+        $errors[] = 'Invalid preferred date.';
+    }
+    // Validate product selection (on POST)
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $product_ids = $_POST['product_ids'] ?? [];
+        if (empty($product_ids) || !is_array($product_ids)) {
+            $errors[] = 'Please select at least one service.';
+        }
+    }
+    // Reject direct access without session data
+    if (empty($form_data)) {
+        $errors[] = 'Appointment details are required.';
+    }
+    if (!empty($errors)) {
+        echo '<h2>Validation Error</h2>';
+        echo '<ul style="color:#d00;">';
+        foreach ($errors as $err) echo '<li>' . htmlspecialchars($err) . '</li>';
+        echo '</ul>';
+        echo '<a href="service-form.php?category=book-appointment">&larr; Back to Appointment Form</a>';
+        exit;
+    }
+} else {
+    if (!$category || empty($form_data)) {
+        echo '<h2>Missing information</h2>';
+        echo '<p>Category and form data are required.</p>';
+        echo '<a href="services.php">&larr; Back to Services</a>';
+        exit;
+    }
+    $stmt = $pdo->prepare('SELECT * FROM products WHERE category_slug = ? AND is_active = 1 ORDER BY price ASC');
+    $stmt->execute([$category]);
+    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
-
-// Step 4: Load products
-$stmt = $pdo->prepare('SELECT * FROM products WHERE category_slug = ? AND is_active = 1 ORDER BY price ASC');
-$stmt->execute([$category]);
-$products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 ?><main class="main-content">
     <h1 class="review-title">Review &amp; Select Services</h1>
