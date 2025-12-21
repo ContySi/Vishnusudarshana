@@ -267,11 +267,17 @@ h1 {
     </div>
 <?php else: ?>
 
+
 <div class="filter-bar">
     <label for="calendar-date">Pending Date</label>
     <input type="date"
            id="calendar-date"
-           value="<?= htmlspecialchars($selectedDate) ?>">
+           value="<?= htmlspecialchars($selectedDate) ?>"
+           <?= empty($pendingDates) ? 'disabled' : '' ?>
+    >
+</div>
+<div id="calendar-helper" style="font-size:0.98em;color:#555;margin-bottom:10px;">
+    Only highlighted dates contain appointments
 </div>
 
 <div style="margin-bottom:18px;font-weight:600;color:#800000;">
@@ -320,21 +326,48 @@ h1 {
 </div>
 
 <script>
-const allowedDates = <?= json_encode(array_keys($pendingDates)) ?>;
+// PHASE 1 – DATA EXPORT
+const enabledDates = <?= json_encode(array_keys($pendingDates)) ?>;
 const calendarInput = document.getElementById('calendar-date');
 const selectAll = document.getElementById('selectAll');
+let lastValidDate = "<?= $selectedDate ?>";
 
+// PHASE 2 – CALENDAR RESTRICTION
 if (calendarInput) {
+    // Disable calendar if no enabled dates
+    if (enabledDates.length === 0) {
+        calendarInput.disabled = true;
+        document.getElementById('calendar-helper').textContent = 'No pending appointments available';
+    }
+
     calendarInput.addEventListener('change', function () {
-        if (!allowedDates.includes(this.value)) {
-            alert('No appointments on selected date');
-            this.value = "<?= $selectedDate ?>";
+        if (!enabledDates.includes(this.value)) {
+            alert('No appointments on this date');
+            this.value = lastValidDate;
             return;
         }
+        lastValidDate = this.value;
         window.location.href = '?date=' + this.value;
+    });
+
+    // Prevent manual typing of invalid dates
+    calendarInput.addEventListener('blur', function () {
+        if (!enabledDates.includes(this.value)) {
+            this.value = lastValidDate;
+        }
     });
 }
 
+// PHASE 3 – VISUAL UX IMPROVEMENTS (workaround for <input type="date"> limitations)
+// Add a faded look if calendar is disabled
+if (calendarInput && calendarInput.disabled) {
+    calendarInput.style.opacity = 0.5;
+    calendarInput.style.cursor = 'not-allowed';
+}
+
+// PHASE 4 – ACCESSIBILITY & FALLBACK handled above
+
+// Select/Deselect all checkboxes
 if (selectAll) {
     selectAll.addEventListener('change', function () {
         document.querySelectorAll('.rowCheckbox').forEach(cb => {
