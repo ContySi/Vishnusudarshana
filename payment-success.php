@@ -166,6 +166,26 @@ try {
         $totalAmount,
         $payment_id
     ]);
+
+    // WhatsApp: Appointment Booked (only for appointments)
+    if ($category === 'appointment') {
+        require_once __DIR__ . '/helpers/send_whatsapp.php';
+        try {
+            sendWhatsAppMessage(
+                $mobile,
+                'appointment_booked',
+                'en',
+                [
+                    'name' => $customerName,
+                    'tracking_id' => $tracking_id,
+                    'preferred_date' => $formData['preferred_date'] ?? '',
+                    'appointment_type' => $formData['appointment_type'] ?? ''
+                ]
+            );
+        } catch (Throwable $e) {
+            error_log('WhatsApp booking failed: ' . $e->getMessage());
+        }
+    }
 } catch (Throwable $e) {
     error_log('Service request insert failed: ' . $e->getMessage() . ' (payment_id=' . $payment_id . ', tracking_id=' . $tracking_id . ')');
     // Continue - data is safe in pending_payments table for manual recovery

@@ -41,6 +41,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $params = array_merge([$assignedDate, $timeFrom, $timeTo], $appointmentIds);
             $stmt->execute($params);
 
+            // WhatsApp: Appointment Accepted (for each appointment)
+            require_once __DIR__ . '/../../helpers/send_whatsapp.php';
+            foreach ($appointmentIds as $id) {
+                $st = $pdo->prepare("SELECT customer_name, mobile, tracking_id, form_data FROM service_requests WHERE id = ?");
+                $st->execute([$id]);
+                $row = $st->fetch(PDO::FETCH_ASSOC);
+                if ($row) {
+                    $fd = json_decode($row['form_data'], true) ?? [];
+                    try {
+                        sendWhatsAppMessage(
+                            $row['mobile'],
+                            'appointment_accepted',
+                            'en',
+                            [
+                                'name' => $row['customer_name'],
+                                'tracking_id' => $row['tracking_id'],
+                                'assigned_date' => $fd['assigned_date'] ?? '',
+                                'from_time' => $fd['assigned_from_time'] ?? '',
+                                'to_time' => $fd['assigned_to_time'] ?? ''
+                            ]
+                        );
+                    } catch (Throwable $e) {
+                        error_log('WhatsApp accept failed: ' . $e->getMessage());
+                    }
+                }
+            }
+
             header('Location: appointments.php?success=accepted');
             exit;
         }
