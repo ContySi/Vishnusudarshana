@@ -1,13 +1,4 @@
-
-
-
-
 <?php
-// Start session before any output or includes
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
 require_once 'header.php';
 require_once __DIR__ . '/config/db.php';
 

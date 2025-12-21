@@ -1,28 +1,70 @@
+    // Validate required fields before insert
+    $requiredFields = [
+        'customer_name' => $customerName,
+        'mobile' => $mobile,
+        'preferred_date' => $preferredDate,
+        'appointment_type' => $appointmentType
+    ];
+    $missingFields = [];
+    foreach ($requiredFields as $field => $value) {
+        if ($value === null || $value === '') {
+            $missingFields[] = $field;
+        }
+    }
+    if (!empty($missingFields)) {
+        error_log('Appointment insert failed: missing fields: ' . implode(', ', $missingFields));
+        // Redirect safely to services page with error message
+        header('Location: services.php?msg=missing_required_appointment_fields');
+        exit;
+    }
+// Defensive: Never allow transaction_ref to be NULL
+if (empty($payment_id)) {
+    echo '<main class="main-content"><h2>Payment Error</h2><div class="review-card">Missing or invalid payment reference.</div></main>';
+    require_once 'footer.php';
+    exit;
+}
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once __DIR__ . '/config/db.php';
 require_once 'header.php';
 require_once __DIR__ . '/helpers/send_whatsapp.php';
 
-if ($paymentSource === 'appointment') {
-    // Insert appointment record post-payment if not already present
-    $form = $_SESSION['book_appointment'] ?? [];
-    $customerName = $form['full_name'] ?? '';
-    $mobile = $form['mobile'] ?? '';
-    $email = $form['email'] ?? '';
-    $appointmentType = $form['appointment_type'] ?? '';
-    $preferredDate = $form['preferred_date'] ?? '';
-    $preferredTime = $form['preferred_time'] ?? '';
-    $notes = $form['notes'] ?? null;
+// Define $payment_id and $paymentSource safely at the top
+$payment_id = isset($_GET['payment_id']) ? trim($_GET['payment_id']) : '';
+if (empty($payment_id)) {
+    // Optionally handle missing payment_id (redirect or error)
+}
+$paymentSource = isset($_SESSION['pending_payment']['source']) ? $_SESSION['pending_payment']['source'] : '';
+
+// Centralized appointment payment handling
+if (isset($paymentSource) && $paymentSource === 'appointment') {
+    // Use session for appointment form data
+    $form = isset($_SESSION['book_appointment']) && is_array($_SESSION['book_appointment']) ? $_SESSION['book_appointment'] : (isset($pending['appointment_form']) && is_array($pending['appointment_form']) ? $pending['appointment_form'] : []);
+    // Map fields, only insert NULL if truly missing
+    $customerName = isset($form['full_name']) && trim($form['full_name']) !== '' ? $form['full_name'] : null;
+    $mobile = isset($form['mobile']) && trim($form['mobile']) !== '' ? $form['mobile'] : null;
+    $email = isset($form['email']) && trim($form['email']) !== '' ? $form['email'] : null;
+    $appointmentType = isset($form['appointment_type']) && trim($form['appointment_type']) !== '' ? $form['appointment_type'] : null;
+    $preferredDate = isset($form['preferred_date']) && trim($form['preferred_date']) !== '' ? $form['preferred_date'] : null;
+    $preferredTime = isset($form['preferred_time']) && trim($form['preferred_time']) !== '' ? $form['preferred_time'] : null;
+    $notes = isset($form['notes']) && trim($form['notes']) !== '' ? $form['notes'] : null;
 
     // Prevent duplicate appointment for same payment
     $dupCheck = $pdo->prepare("SELECT id FROM appointments WHERE transaction_ref = ?");
     $dupCheck->execute([$payment_id]);
     $existing = $dupCheck->fetch(PDO::FETCH_ASSOC);
     if ($existing && !empty($existing['id'])) {
-        // Already exists, use existing appointment ID, skip insert
         $appointmentId = (int)$existing['id'];
+        // Optionally update payment_status if not already 'paid'
+        if (!isset($existing['payment_status']) || $existing['payment_status'] !== 'paid') {
+            $stmt = $pdo->prepare("UPDATE appointments SET payment_status = 'paid' WHERE id = ?");
+            $stmt->execute([$appointmentId]);
+        }
     } else {
+        // Always use $payment_id for transaction_ref, never NULL
         $sql = "INSERT INTO appointments (customer_name, mobile, email, appointment_type, preferred_date, preferred_time_slot, notes, status, payment_status, transaction_ref, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 'paid', ?, NOW())";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
@@ -33,7 +75,7 @@ if ($paymentSource === 'appointment') {
             $preferredDate,
             $preferredTime,
             $notes,
-            $payment_id
+            $payment_id // always non-null here
         ]);
         $appointmentId = (int)$pdo->lastInsertId();
     }
@@ -147,7 +189,7 @@ if ($paymentSource === 'appointment') {
     echo '<style>.main-content { max-width: 480px; margin: 0 auto; background: #fff; border-radius: 18px; box-shadow: 0 4px 24px #e0bebe33; padding: 18px 12px 28px 12px; } .review-title { font-size: 1.18em; font-weight: bold; margin-bottom: 18px; text-align: center; } .review-card { background: #f9eaea; border-radius: 14px; box-shadow: 0 2px 8px #e0bebe33; padding: 16px; margin-bottom: 18px; } .section-title { font-size: 1.05em; color: #800000; margin-bottom: 10px; font-weight: 600; } .pay-btn { background: #800000; color: #fff; border: none; border-radius: 8px; padding: 14px 0; font-size: 1.08em; font-weight: 600; margin-top: 10px; cursor: pointer; box-shadow: 0 2px 8px #80000022; transition: background 0.15s; text-decoration:none; } .pay-btn:active { background: #5a0000; } .review-back-link { display:block;text-align:center;margin-top:18px;color:#1a8917;font-size:0.98em;text-decoration:none; } @media (max-width: 700px) { .main-content { padding: 8px 2px 16px 2px; border-radius: 0; } }</style>';
     require_once 'footer.php';
     exit; // Explicit exit to prevent fallthrough
-}
+
 
 
 // Only run service_requests logic for non-appointment categories
