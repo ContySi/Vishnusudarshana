@@ -1,5 +1,33 @@
 <?php
+
 require_once __DIR__ . '/../../config/db.php';
+
+// PHASE 2.1 – Dynamic appointment statistics from service_requests
+
+// Total Appointments
+$stmtTotal = $pdo->prepare("SELECT COUNT(*) FROM service_requests WHERE category_slug = 'appointment' AND payment_status = 'Paid'");
+$stmtTotal->execute();
+$totalAppointments = (int)$stmtTotal->fetchColumn();
+
+// Today's Appointments
+$stmtToday = $pdo->prepare("SELECT COUNT(*) FROM service_requests WHERE category_slug = 'appointment' AND payment_status = 'Paid' AND DATE(created_at) = CURDATE()");
+$stmtToday->execute();
+$todayAppointments = (int)$stmtToday->fetchColumn();
+
+// Pending (Received)
+$stmtPending = $pdo->prepare("SELECT COUNT(*) FROM service_requests WHERE category_slug = 'appointment' AND payment_status = 'Paid' AND service_status = 'Received'");
+$stmtPending->execute();
+$pendingAppointments = (int)$stmtPending->fetchColumn();
+
+// Accepted
+$stmtAccepted = $pdo->prepare("SELECT COUNT(*) FROM service_requests WHERE category_slug = 'appointment' AND payment_status = 'Paid' AND service_status = 'Accepted'");
+$stmtAccepted->execute();
+$acceptedAppointments = (int)$stmtAccepted->fetchColumn();
+
+// Completed
+$stmtCompleted = $pdo->prepare("SELECT COUNT(*) FROM service_requests WHERE category_slug = 'appointment' AND payment_status = 'Paid' AND service_status = 'Completed'");
+$stmtCompleted->execute();
+$completedAppointments = (int)$stmtCompleted->fetchColumn();
 
 // PHASE 2 – Appointment listing from service_requests (category_slug=appointment)
 
@@ -176,20 +204,24 @@ h1 {
 <h1>Appointment Management</h1>
 <div class="summary-cards">
     <div class="summary-card">
-        <div class="summary-count">0</div>
+        <div class="summary-count"><?php echo $todayAppointments; ?></div>
         <div class="summary-label">Today’s Appointments</div>
     </div>
     <div class="summary-card">
-        <div class="summary-count">0</div>
+        <div class="summary-count"><?php echo $pendingAppointments; ?></div>
         <div class="summary-label">Pending</div>
     </div>
     <div class="summary-card">
-        <div class="summary-count">0</div>
+        <div class="summary-count"><?php echo $acceptedAppointments; ?></div>
         <div class="summary-label">Accepted</div>
     </div>
     <div class="summary-card">
-        <div class="summary-count">0</div>
+        <div class="summary-count"><?php echo $completedAppointments; ?></div>
         <div class="summary-label">Completed</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-count"><?php echo $totalAppointments; ?></div>
+        <div class="summary-label">Total Appointments</div>
     </div>
 </div>
 <form class="filter-bar" method="get">
