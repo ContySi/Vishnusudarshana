@@ -211,7 +211,6 @@ require_once 'header.php';
 require_once 'footer.php';
 
 // Clear service-related session data ONLY AFTER UI rendering
-unset($_SESssion data ONLY AFTER UI rendering
 unset($_SESSION['pending_payment']);
 unset($_SESSION['book_appointment']);
 unset($_SESSION['appointment_products']);
