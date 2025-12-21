@@ -119,6 +119,7 @@ h1 { color: #800000; margin-bottom: 18px; }
 </style>
 </head>
 <body>
+<?php include __DIR__ . '/../includes/top-menu.php'; ?>
 <div class="admin-container">
     <h1>Accepted Appointments</h1>
 

@@ -20,6 +20,7 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <title>Admin - Product Management</title>
 </head>
 <body>
+<?php include __DIR__ . '/../includes/top-menu.php'; ?>
     <h1>Product Management</h1>
     <a href="add.php">+ Add Product</a>
     <table border="1" cellpadding="8" cellspacing="0">

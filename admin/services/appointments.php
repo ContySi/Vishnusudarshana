@@ -457,6 +457,7 @@ h1 {
 </head>
 
 <body>
+<?php include __DIR__ . '/../includes/top-menu.php'; ?>
 
 <div class="admin-container">
 <h1>Appointment Management</h1>

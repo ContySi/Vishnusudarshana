@@ -63,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Edit Product</title>
 </head>
 <body>
+<?php include __DIR__ . '/../includes/top-menu.php'; ?>
     <h1>Edit Product</h1>
     <a href="index.php">&larr; Back to Product List</a>
     <?php if ($errors): ?>

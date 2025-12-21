@@ -57,6 +57,7 @@ function generateSlug($str) {
     <title>Add Product</title>
 </head>
 <body>
+<?php include __DIR__ . '/../includes/top-menu.php'; ?>
     <h1>Add Product</h1>
     <a href="index.php">&larr; Back to Product List</a>
     <?php if ($errors): ?>

@@ -240,6 +240,7 @@ $adminNotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </style>
 </head>
 <body>
+<?php include __DIR__ . '/../includes/top-menu.php'; ?>
 <div class="admin-container">
     <h1>View Service Request</h1>
     <?php if (!empty($successMsg)): ?><div class="success-msg"><?php echo $successMsg; ?></div><?php endif; ?>

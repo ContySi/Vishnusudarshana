@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Delete Product</title>
 </head>
 <body>
+<?php include __DIR__ . '/../includes/top-menu.php'; ?>
     <h1>Delete Product</h1>
     <form method="post">
         <p>Are you sure you want to delete this product permanently?</p>
