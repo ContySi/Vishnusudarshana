@@ -40,17 +40,19 @@ if ($category === 'appointment') {
     if ($date < $todayIST || $date > $maxDate) {
         $errors[] = 'Invalid preferred date.';
     }
-    // For appointment, skip generic product selection validation
+    // For appointment, bypass generic product selection validation
     if ($category === 'appointment') {
-        if (empty($_SESSION['book_appointment']) && empty($form_data)) {
-            $errors[] = 'Appointment form data missing.';
-        }
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $product_ids = $_POST['product_ids'] ?? [];
-            if (empty($product_ids) || !is_array($product_ids)) {
-                $errors[] = 'Please select at least one appointment service.';
+        $sessionData = !empty($_SESSION['book_appointment']) ? $_SESSION['book_appointment'] : $form_data;
+        $requiredFields = ['full_name', 'mobile', 'preferred_date', 'appointment_type'];
+        foreach ($requiredFields as $field) {
+            if (empty($sessionData[$field]) || !is_string($sessionData[$field]) || trim($sessionData[$field]) === '') {
+                $errors[] = ucfirst(str_replace('_', ' ', $field)) . ' is required.';
             }
         }
+        if (empty($sessionData)) {
+            $errors[] = 'Appointment form data missing.';
+        }
+        // Do NOT require product selection at this stage for appointment
     } else {
         // Validate product selection (on POST) for other categories
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
