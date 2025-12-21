@@ -99,8 +99,10 @@ $paymentSource = $pending['source'] ?? 'service';
 /* ======================
    STEP 2: APPOINTMENT FLOW
    ====================== */
-if ($paymentSource === 'appointment') {
-
+if (in_array($paymentSource, ['appointment', 'book-appointment'], true)) {
+error_log('Blocked service flow for appointment payment_id=' . $payment_id);
+    exit;
+}
     // LOAD appointment_form from database (source of truth)
     $form = $pending['appointment_form'] ?? [];
 
@@ -302,7 +304,9 @@ if ($paymentSource === 'appointment') {
 
 // GUARD: This code ONLY executes if NOT appointment
 // (Appointment flow exits at line 208)
-if ($paymentSource === 'appointment') {
+if (in_array($paymentSource, ['appointment', 'book-appointment'], true)) {
+    error_log('Blocked service flow for appointment payment_id=' . $payment_id);
+    exit;
     error_log('LOGIC ERROR: Appointment should have exited earlier. payment_id=' . $payment_id);
     http_response_code(500);
     exit('Error: Appointment flow breach detected');
@@ -354,7 +358,7 @@ $products     = $pending['products'] ?? [];
 $totalAmount  = $pending['total_amount'] ?? 0;
 
 // DEFENSIVE GUARD: Block any appointment payments from reaching service insert
-if ($paymentSource === 'appointment') {
+if (in_array($paymentSource, ['appointment', 'book-appointment'], true)) {
     error_log('CRITICAL: Blocked service insert for appointment payment_id=' . $payment_id);
     exit('Error: Appointment cannot insert service request');
 }
