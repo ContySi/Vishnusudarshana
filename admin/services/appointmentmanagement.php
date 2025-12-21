@@ -1,3 +1,33 @@
+// SAFEGUARD: All appointment status updates must operate ONLY on appointments table.
+// Never update, insert, or delete from service_requests in this file.
+
+// Helper function to update appointment status safely
+function updateAppointmentStatus($pdo, $appointmentId, $newStatus) {
+    // Only update appointments table
+    $stmt = $pdo->prepare('UPDATE appointments SET status = ? WHERE id = ?');
+    return $stmt->execute([$newStatus, $appointmentId]);
+}
+
+// Helper function to reschedule appointment safely
+function rescheduleAppointment($pdo, $appointmentId, $newDate, $newTimeSlot) {
+    // Only update appointments table
+    $stmt = $pdo->prepare('UPDATE appointments SET preferred_date = ?, preferred_time_slot = ?, status = ? WHERE id = ?');
+    return $stmt->execute([$newDate, $newTimeSlot, 'rescheduled', $appointmentId]);
+}
+
+// SAFEGUARD: Block any accidental reference to service_requests
+if (isset($_POST['appointment_id']) && isset($_POST['action'])) {
+    $appointmentId = (int)$_POST['appointment_id'];
+    $action = $_POST['action'];
+    if ($action === 'accept') {
+        updateAppointmentStatus($pdo, $appointmentId, 'accepted');
+    } elseif ($action === 'complete') {
+        updateAppointmentStatus($pdo, $appointmentId, 'completed');
+    } elseif ($action === 'reschedule' && isset($_POST['new_date'], $_POST['new_time_slot'])) {
+        rescheduleAppointment($pdo, $appointmentId, $_POST['new_date'], $_POST['new_time_slot']);
+    }
+    // Never touch service_requests here
+}
 <?php
 // admin/services/appointmentmanagement.php
 
@@ -15,7 +45,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
     $appointments = [];
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
         $stmt = $pdo->prepare("
-            SELECT * 
+            SELECT id, customer_name, mobile, appointment_type, preferred_date, preferred_time_slot, payment_status, status, created_at
             FROM appointments 
             WHERE payment_status = 'paid'
               AND status = 'pending'
@@ -63,14 +93,13 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
                         <td><?= $a['id'] ?></td>
                         <td><?= htmlspecialchars($a['customer_name']) ?></td>
                         <td><?= htmlspecialchars($a['mobile']) ?></td>
-                        <td><?= htmlspecialchars($a['email']) ?></td>
+                        <!-- No email column as per requirements -->
                         <td><?= ucfirst($a['appointment_type']) ?></td>
                         <td><?= htmlspecialchars($a['preferred_time_slot']) ?></td>
-                        <td><?= nl2br(htmlspecialchars($a['notes'])) ?></td>
-                        <td></td>
-                        <td></td>
-                        <td><span class="status-badge payment-paid">Paid</span></td>
-                        <td><span class="status-badge status-pending">Pending</span></td>
+                        <!-- No notes column as per requirements -->
+                        <!-- No Service Start/End columns as per requirements -->
+                        <td><span class="status-badge payment-paid"><?= htmlspecialchars(ucfirst($a['payment_status'])) ?></span></td>
+                        <td><span class="status-badge status-pending"><?= htmlspecialchars(ucfirst($a['status'])) ?></span></td>
                         <td><?= date('d-m-Y H:i', strtotime($a['created_at'])) ?></td>
                     </tr>
                 <?php endforeach; ?>
@@ -97,13 +126,14 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
 
 
 /* Fetch pending paid appointment dates */
+
 $stmt = $pdo->prepare("
-    SELECT preferred_date, COUNT(*) AS count
-    FROM appointments
-    WHERE payment_status = 'paid'
-      AND status = 'pending'
-    GROUP BY preferred_date
-    ORDER BY preferred_date ASC
+        SELECT preferred_date, COUNT(*) AS count
+        FROM appointments
+        WHERE payment_status = 'paid'
+            AND status = 'pending'
+        GROUP BY preferred_date
+        ORDER BY preferred_date ASC
 ");
 $stmt->execute();
 $dates = $stmt->fetchAll(PDO::FETCH_ASSOC);

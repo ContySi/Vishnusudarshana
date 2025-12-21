@@ -219,65 +219,14 @@ if ($paymentSource === 'appointment') {
     }
 
 
-// Original service payment flow
-// Extract and map data
+// Original service payment flow (skip for appointment category)
 $category = $pending['category_slug'] ?? $pending['category'] ?? '';
-$customer = $pending['customer_details'] ?? [];
-$products = $pending['products'] ?? [];
-$totalAmount = $pending['total_amount'] ?? 0;
-$customerName = $customer['full_name'] ?? '';
-$mobile = $customer['mobile'] ?? '';
-$email = $customer['email'] ?? '';
-$city = $customer['city'] ?? '';
-$formData = $pending['form_data'] ?? $customer;
-$selectedProducts = $products;
-$paymentId = $payment_id;
-
-// Prepare WhatsApp notification variables (Step 2)
-$mobileNumber = $mobile;
-$trackingId = null; // will be set after DB check/insert
-$categoryName = '';
-$trackingLink = '';
-
-// Get human-readable category name
-// Use category.php's $categories array for mapping
-$categoryTitles = [
-    'birth-child' => 'Birth & Child Services',
-    'marriage-matching' => 'Marriage & Matching',
-    'astrology-consultation' => 'Astrology Consultation',
-    'muhurat-event' => 'Muhurat & Event Guidance',
-    'pooja-vastu-enquiry' => 'Pooja, Ritual & Vastu Enquiry',
-];
-$categoryName = $categoryTitles[$category] ?? ucfirst(str_replace('-', ' ', $category));
-
-// Prevent duplicate insert by checking payment_id
-$stmtCheck = $pdo->prepare("SELECT tracking_id FROM service_requests WHERE payment_id = ?");
-$stmtCheck->execute([$paymentId]);
-$existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
-if ($existing && !empty($existing['tracking_id'])) {
-    $trackingId = $existing['tracking_id'];
-} else {
-    $stmt = $pdo->prepare("
-        INSERT INTO service_requests (
-            tracking_id,
-            category_slug,
-            customer_name,
-            mobile,
-            email,
-            city,
-            form_data,
-            selected_products,
-            total_amount,
-            payment_id,
-            payment_status,
-            service_status
-        ) VALUES (
-            :tracking_id,
-            :category_slug,
-            :customer_name,
-            :mobile,
-            :email,
-            :city,
+if ($category === 'appointment') {
+    // Do not insert/update service_requests for appointment bookings
+    // All logic handled above in appointments table
+    exit;
+}
+// ...existing code for other categories...
             :form_data,
             :selected_products,
             :total_amount,

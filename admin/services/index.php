@@ -215,6 +215,9 @@ if ($selectedStatus !== 'All') {
 if ($selectedCategory !== 'All') {
     $where[]  = 'category_slug = ?';
     $params[] = $selectedCategory;
+} else {
+    // Exclude appointment bookings from service_requests
+    $where[] = "category_slug != 'appointment'";
 }
 if ($search !== '') {
     $where[] = '(tracking_id LIKE ? OR mobile LIKE ? OR customer_name LIKE ?)';
