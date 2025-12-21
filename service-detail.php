@@ -62,6 +62,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 </script>
+
+<style>
     font-family: Arial, sans-serif;
     margin: 0;
     background: linear-gradient(135deg, #f7e7e7 0%, #f7f7fa 100%);
