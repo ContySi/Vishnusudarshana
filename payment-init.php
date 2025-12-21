@@ -3,21 +3,6 @@ session_start();
 require_once 'header.php';
 require_once __DIR__ . '/config/db.php';
 
-// Create pending_payments table if not exists (for session loss recovery)
-$pdo->exec("CREATE TABLE IF NOT EXISTS pending_payments (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    payment_id VARCHAR(100) UNIQUE,
-    source VARCHAR(50),
-    customer_details JSON,
-    appointment_form JSON,
-    form_data JSON,
-    selected_products JSON,
-    category VARCHAR(50),
-    total_amount DECIMAL(10,2),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP DEFAULT (DATE_ADD(NOW(), INTERVAL 1 DAY))
-);");
-
 // Detect source: appointment or service
 $source = $_GET['source'] ?? '';
 $appointmentId = $_GET['appointment_id'] ?? null;
