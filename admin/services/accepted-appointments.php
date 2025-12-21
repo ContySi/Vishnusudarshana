@@ -124,30 +124,43 @@ h1 { color: #800000; margin-bottom: 18px; }
                         <th>Tracking ID</th>
                         <th>Customer Name</th>
                         <th>Mobile</th>
-                        <th>Assigned Date</th>
-                        <th>From Time</th>
-                        <th>To Time</th>
-                        <th>Status</th>
+                        <th>Email</th>
+                        <th>Preferred Date</th>
+                        <th>Payment Status</th>
+                        <th>Service Status</th>
+                        <th>Created Date</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                 <?php if (empty($appointments)): ?>
-                    <tr><td colspan="8" class="no-data">No appointments for selected date.</td></tr>
+                    <tr><td colspan="10" class="no-data">No appointment bookings found.</td></tr>
                 <?php else: ?>
-                    <?php foreach ($appointments as $a): $fd = json_decode($a['form_data'], true) ?? []; $ad = $fd['assigned_date'] ?? ''; $ft = $fd['assigned_from_time'] ?? ''; $tt = $fd['assigned_to_time'] ?? ''; $adDisp = $ad ? (DateTime::createFromFormat('Y-m-d', $ad)?->format('d-M-Y') ?: $ad) : '—'; ?>
+                    <?php foreach ($appointments as $a):
+                        $fd = json_decode($a['form_data'], true) ?? [];
+                        $preferredDate = $fd['preferred_date'] ?? '';
+                        $preferredDisplay = $preferredDate ? (DateTime::createFromFormat('Y-m-d', $preferredDate)?->format('d-M-Y') ?: $preferredDate) : '—';
+                        $createdDisplay = '';
+                        if (!empty($a['created_at'])) {
+                            $co = new DateTime($a['created_at']);
+                            $createdDisplay = $co->format('d-M-Y');
+                        }
+                    ?>
                         <tr>
-                                <td><input type="checkbox" class="rowCheckbox" value="<?= (int)$a['id'] ?>"></td>
-                                <td><?= htmlspecialchars($a['tracking_id']) ?></td>
-                                <td><?= htmlspecialchars($a['customer_name']) ?></td>
-                                <td><?= htmlspecialchars($a['mobile']) ?></td>
-                                <td><?= htmlspecialchars($fd['email'] ?? '') ?></td>
-                                <td style="font-weight:600;color:#800000;"><?= htmlspecialchars($preferredDisplay) ?></td>
-                                <td><span class="status-badge payment-paid">Paid</span></td>
-                                <td><span class="status-badge status-accepted">Accepted</span></td>
-                                <td><?= htmlspecialchars($createdDisplay) ?></td>
-                                <td>
-                                    <a href="view.php?id=<?= (int)$a['id'] ?>" class="view-btn" style="padding:6px 14px;background:#007bff;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">View</a>
-                                </td>
+                            <td><input type="checkbox" class="rowCheckbox" value="<?= (int)$a['id'] ?>"></td>
+                            <td><?= htmlspecialchars($a['tracking_id']) ?></td>
+                            <td><?= htmlspecialchars($a['customer_name']) ?></td>
+                            <td><?= htmlspecialchars($a['mobile']) ?></td>
+                            <td><?= htmlspecialchars($fd['email'] ?? '') ?></td>
+                            <td style="font-weight:600;color:#800000;">
+                                <?= htmlspecialchars($preferredDisplay) ?>
+                            </td>
+                            <td><span class="status-badge payment-paid">Paid</span></td>
+                            <td><span class="status-badge status-accepted">Accepted</span></td>
+                            <td><?= htmlspecialchars($createdDisplay) ?></td>
+                            <td>
+                                <a href="view.php?id=<?= (int)$a['id'] ?>" class="view-btn" style="padding:6px 14px;background:#007bff;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">View</a>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
