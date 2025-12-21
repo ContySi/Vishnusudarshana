@@ -3,6 +3,20 @@ session_start();
 require_once 'header.php';
 require_once __DIR__ . '/config/db.php';
 
+// Create pending_payments table if not exists (for session loss recovery)
+$pdo->exec("CREATE TABLE IF NOT EXISTS pending_payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    payment_id VARCHAR(100) UNIQUE,
+    source VARCHAR(50),
+    customer_details JSON,
+    appointment_form JSON,
+    form_data JSON,
+    selected_products JSON,
+    category VARCHAR(50),
+    total_amount DECIMAL(10,2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP DEFAULT (DATE_ADD(NOW(), INTERVAL 1 DAY))
+);");
 
 // Detect source: appointment or service
 $source = $_GET['source'] ?? '';
@@ -352,17 +366,59 @@ if ($source === 'appointment') {
     <a href="service-review.php?category=<?php echo htmlspecialchars($category ?? ''); ?>" class="review-back-link">&larr; Back to Review</a>
     <?php endif; ?>
 </main>
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script>
+
 <?php
+// ========== STORE PENDING PAYMENT DATA BEFORE RAZORPAY REDIRECT ==========
+// This MUST execute before user clicks the payment button
+// Data survives session loss, page refresh, and browser close
+
 $pending = $_SESSION['pending_payment'] ?? [];
 $customer = $pending['customer_details'] ?? [];
 $total_amount = $pending['total_amount'] ?? 0;
+$paymentSource = $pending['source'] ?? 'service';
+
+// Generate unique order_id for database storage
+// This will be mapped to actual Razorpay payment_id in payment-success.php
+$orderId = 'ORD-' . time() . '-' . bin2hex(random_bytes(8));
+
+// Store ALL pending payment data to database for session loss recovery
+try {
+    $insertStmt = $pdo->prepare("
+        INSERT INTO pending_payments (
+            payment_id, 
+            source, 
+            customer_details, 
+            appointment_form, 
+            form_data, 
+            selected_products, 
+            category, 
+            total_amount
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ");
+    $insertStmt->execute([
+        $orderId,
+        $paymentSource,
+        json_encode($pending['customer_details'] ?? []),
+        json_encode($pending['appointment_form'] ?? []),
+        json_encode($pending['form_data'] ?? []),
+        json_encode($pending['products'] ?? []),
+        $pending['category'] ?? '',
+        $total_amount
+    ]);
+    // Success - data is persisted in database
+} catch (Throwable $e) {
+    error_log('Failed to store pending payment to database: ' . $e->getMessage());
+    // Log error but continue - payment flow should not be blocked
+}
+?>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+<?php
 $amount_in_paise = (int)round($total_amount * 100);
 $name = isset($customer['full_name']) ? addslashes($customer['full_name']) : '';
 $email = isset($customer['email']) ? addslashes($customer['email']) : '';
 $mobile = isset($customer['mobile']) ? addslashes($customer['mobile']) : '';
-$paymentSource = $pending['source'] ?? 'service';
 $description = ($paymentSource === 'appointment') ? 'Appointment Booking Fee' : 'Service Payment';
 ?>
 
@@ -381,7 +437,21 @@ const options = {
         color: "#800000"
     },
     handler: function (response) {
-        window.location.href = "payment-success.php?payment_id=" + encodeURIComponent(response.razorpay_payment_id);
+        // Razorpay payment successful - update database and redirect
+        var actualPaymentId = response.razorpay_payment_id;
+        var orderId = "<?php echo $orderId; ?>";
+        
+        // Update database to link orderId with actual Razorpay payment_id
+        fetch('payment-update.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'order_id=' + encodeURIComponent(orderId) + '&payment_id=' + encodeURIComponent(actualPaymentId)
+        }).then(function() {
+            window.location.href = "payment-success.php?payment_id=" + encodeURIComponent(actualPaymentId);
+        }).catch(function() {
+            // Even if DB update fails, proceed - data is safe with orderId in database
+            window.location.href = "payment-success.php?payment_id=" + encodeURIComponent(actualPaymentId);
+        });
     },
     modal: {
         ondismiss: function() {
