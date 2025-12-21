@@ -269,12 +269,9 @@ h1 {
 
 
 <div class="filter-bar">
-    <label for="calendar-date">Pending Date</label>
-    <input type="date"
-           id="calendar-date"
-           value="<?= htmlspecialchars($selectedDate) ?>"
-           <?= empty($pendingDates) ? 'disabled' : '' ?>
-    >
+    <label>Pending Date</label>
+    <div id="calendar-container"></div>
+    <input type="hidden" id="selectedDate" name="selectedDate" value="<?= htmlspecialchars($selectedDate) ?>">
 </div>
 <div id="calendar-helper" style="font-size:0.98em;color:#555;margin-bottom:10px;">
     Only highlighted dates contain appointments
