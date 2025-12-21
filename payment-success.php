@@ -33,7 +33,6 @@ if ($payment_id === '') {
     header('Location: services.php?msg=missing_payment_id');
     exit;
 }
-$source = 'appointment'; // force canonical value
 
 // LOAD FROM DATABASE FIRST (source of truth for all payment types)
 $stmt = $pdo->prepare("SELECT * FROM pending_payments WHERE payment_id = ?");
@@ -95,227 +94,10 @@ if (empty($pending)) {
     exit;
 }
 
-$paymentSource = $pending['source'] ?? 'service';
-
 /* ======================
-   STEP 2: APPOINTMENT FLOW
+   UNIFIED SERVICE FLOW
+   All services (including appointments) follow this single path
    ====================== */
-if (in_array($paymentSource, ['appointment', 'book-appointment'], true)) {
-error_log('Blocked service flow for appointment payment_id=' . $payment_id);
-    exit;
-}
-    // LOAD appointment_form from database (source of truth)
-    $form = $pending['appointment_form'] ?? [];
-
-    // Map appointment_form fields to appointments table columns
-    $customerName    = trim($form['full_name'] ?? '');
-    $mobile          = trim($form['mobile'] ?? '');
-    $email           = trim($form['email'] ?? '');
-    $appointmentType = trim($form['appointment_type'] ?? '');
-    $preferredDate   = trim($form['preferred_date'] ?? '');
-    $preferredTime   = trim($form['preferred_time'] ?? '');
-    $notes           = trim($form['notes'] ?? '');
-
-    // Validate required fields exist
-    if ($customerName === '' || $mobile === '' || $appointmentType === '' || $preferredDate === '') {
-        error_log('Appointment payment ERROR: appointment_form missing required fields for payment_id=' . $payment_id . '. Data: ' . json_encode($form));
-        
-        // Show friendly error message (no technical details to user)
-        require_once 'header.php';
-        ?>
-        <main class="main-content">
-            <h1 class="review-title">Payment Received</h1>
-
-            <div class="review-card">
-                <h2 class="section-title">Thank You!</h2>
-
-                <p class="success-text">
-                    Your payment has been received successfully.<br>
-                    Our team is processing your request.<br>
-                    <br>
-                    We will contact you shortly with details.
-                </p>
-
-                <a href="services.php" class="pay-btn">Back to Services</a>
-            </div>
-        </main>
-
-        <style>
-            .main-content { max-width:480px;margin:0 auto;padding:18px; }
-            .review-title { text-align:center;font-size:1.2em;margin-bottom:16px; }
-            .review-card { background:#f9eaea;border-radius:14px;padding:16px;text-align:center; }
-            .section-title { color:#800000;font-weight:600;margin-bottom:10px; }
-            .success-text { color:#333;margin-bottom:18px; }
-            .pay-btn { display:inline-block;background:#800000;color:#fff;padding:12px 28px;
-                       border-radius:8px;text-decoration:none;font-weight:600; }
-        </style>
-        <?php
-        require_once 'footer.php';
-        exit;
-    }
-
-    // Check for duplicate appointment for same payment
-    $stmt = $pdo->prepare("SELECT id FROM appointments WHERE transaction_ref = ? LIMIT 1");
-    $stmt->execute([$payment_id]);
-    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    $appointmentId = null;
-
-    if ($existing) {
-        // Duplicate detected - use existing appointment ID
-        $appointmentId = (int)$existing['id'];
-    } else {
-        // Insert NEW appointment into appointments table
-        try {
-            $insertStmt = $pdo->prepare("
-                INSERT INTO appointments (
-                    customer_name,
-                    mobile,
-                    email,
-                    appointment_type,
-                    preferred_date,
-                    preferred_time_slot,
-                    notes,
-                    status,
-                    payment_status,
-                    transaction_ref,
-                    created_at
-                ) VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW()
-                )
-            ");
-            $insertStmt->execute([
-                $customerName,
-                $mobile,
-                $email ?: null,
-                $appointmentType,
-                $preferredDate,
-                $preferredTime ?: null,
-                $notes ?: null,
-                'pending',      // status
-                'paid',         // payment_status
-                $payment_id     // transaction_ref
-            ]);
-            $appointmentId = (int)$pdo->lastInsertId();
-            error_log('Appointment inserted: id=' . $appointmentId . ', payment_id=' . $payment_id);
-        } catch (Throwable $e) {
-            error_log('CRITICAL: Appointment insert FAILED for payment_id=' . $payment_id . '. Error: ' . $e->getMessage());
-            // Fail gracefully with user-friendly message
-            require_once 'header.php';
-            ?>
-            <main class="main-content">
-                <h1 class="review-title">Payment Received</h1>
-
-                <div class="review-card">
-                    <h2 class="section-title">Thank You!</h2>
-
-                    <p class="success-text">
-                        Your payment has been received successfully.<br>
-                        Our team is processing your request.<br>
-                        <br>
-                        We will contact you shortly with details.
-                    </p>
-
-                    <a href="services.php" class="pay-btn">Back to Services</a>
-                </div>
-            </main>
-
-            <style>
-                .main-content { max-width:480px;margin:0 auto;padding:18px; }
-                .review-title { text-align:center;font-size:1.2em;margin-bottom:16px; }
-                .review-card { background:#f9eaea;border-radius:14px;padding:16px;text-align:center; }
-                .section-title { color:#800000;font-weight:600;margin-bottom:10px; }
-                .success-text { color:#333;margin-bottom:18px; }
-                .pay-btn { display:inline-block;background:#800000;color:#fff;padding:12px 28px;
-                           border-radius:8px;text-decoration:none;font-weight:600; }
-            </style>
-            <?php
-            require_once 'footer.php';
-            exit;
-        }
-    }
-
-    // Generate Appointment Tracking ID
-    $trackingId = 'APT-' . str_pad($appointmentId, 6, '0', STR_PAD_LEFT);
-
-    /* ======================
-       RENDER APPOINTMENT UI
-       ====================== */
-    require_once 'header.php';
-    ?>
-    <main class="main-content">
-        <h1 class="review-title">Payment Successful</h1>
-
-        <div class="review-card">
-            <h2 class="section-title">Appointment Confirmed</h2>
-
-            <div class="tracking-id">
-                <?= htmlspecialchars($trackingId) ?>
-            </div>
-
-            <p class="success-text">
-                Your appointment payment has been received.<br>
-                Pandit Ji will contact you shortly to confirm the final time slot.
-            </p>
-
-            <a href="services.php" class="pay-btn">Back to Services</a>
-        </div>
-    </main>
-
-    <style>
-        .main-content { max-width:480px;margin:0 auto;padding:18px; }
-        .review-title { text-align:center;font-size:1.2em;margin-bottom:16px; }
-        .review-card { background:#f9eaea;border-radius:14px;padding:16px;text-align:center; }
-        .section-title { color:#800000;font-weight:600;margin-bottom:10px; }
-        .tracking-id { font-size:1.4em;font-weight:700;color:#800000;margin:12px 0; }
-        .success-text { color:#333;margin-bottom:18px; }
-        .pay-btn { display:inline-block;background:#800000;color:#fff;padding:12px 28px;
-                   border-radius:8px;text-decoration:none;font-weight:600; }
-        .pay-btn:active { background:#5a0000; }
-    </style>
-    <?php
-    require_once 'footer.php';
-    
-    // DELETE from pending_payments after successful insertion/confirmation
-    try {
-        $deleteStmt = $pdo->prepare("DELETE FROM pending_payments WHERE payment_id = ?");
-        $deleteStmt->execute([$payment_id]);
-    } catch (Throwable $e) {
-        error_log('Failed to delete pending_payments record for payment_id=' . $payment_id . '. Error: ' . $e->getMessage());
-    }
-    
-
-    // Clear appointment-related session data ONLY AFTER UI rendering
-    unset($_SESSION['pending_payment']);
-    unset($_SESSION['book_appointment']);
-    unset($_SESSION['appointment_products']);
-    
-    /* ===============================================================
-       HARD EXIT: Appointment flow TERMINATES here
-       - NEVER proceeds to service flow code below
-       - NEVER touches service_requests table
-       - Explicit exit() enforces complete flow termination
-       =============================================================== */
-    exit;
-
-/* ======================
-   STEP 3: NORMAL SERVICE FLOW
-   ====================== */
-
-// GUARD: This code ONLY executes if NOT appointment
-// (Appointment flow exits at line 208)
-if (in_array($paymentSource, ['appointment', 'book-appointment'], true)) {
-    error_log('Blocked service flow for appointment payment_id=' . $payment_id);
-    exit;
-    error_log('LOGIC ERROR: Appointment should have exited earlier. payment_id=' . $payment_id);
-    http_response_code(500);
-    exit('Error: Appointment flow breach detected');
-}
-
-/* ======================
-   STEP 3: NORMAL SERVICE FLOW (only if NOT appointment)
-   ====================== */
-if ($paymentSource !== 'appointment') {
 
 // Create service tables if not exist
 $pdo->exec("CREATE TABLE IF NOT EXISTS service_requests (
@@ -349,19 +131,18 @@ if ($category === '') {
 $tracking_id = 'VDSK-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(3)));
 
 // Extract all data from pending (database is source of truth)
-$customerName = $pending['customer_details']['full_name'] ?? '';
-$mobile       = $pending['customer_details']['mobile'] ?? '';
-$email        = $pending['customer_details']['email'] ?? '';
-$city         = $pending['customer_details']['city'] ?? '';
-$formData     = $pending['form_data'] ?? [];
+// For appointments, form_data or appointment_form may contain the details
+$formData = $pending['form_data'] ?? [];
+if (empty($formData) && !empty($pending['appointment_form'])) {
+    $formData = $pending['appointment_form'];
+}
+
+$customerName = $pending['customer_details']['full_name'] ?? $formData['full_name'] ?? '';
+$mobile       = $pending['customer_details']['mobile'] ?? $formData['mobile'] ?? '';
+$email        = $pending['customer_details']['email'] ?? $formData['email'] ?? '';
+$city         = $pending['customer_details']['city'] ?? $formData['city'] ?? '';
 $products     = $pending['products'] ?? [];
 $totalAmount  = $pending['total_amount'] ?? 0;
-
-// DEFENSIVE GUARD: Block any appointment payments from reaching service insert
-if (in_array($paymentSource, ['appointment', 'book-appointment'], true)) {
-    error_log('CRITICAL: Blocked service insert for appointment payment_id=' . $payment_id);
-    exit('Error: Appointment cannot insert service request');
-}
 
 // Insert service request (log errors but continue - data is still in pending_payments table)
 try {
@@ -430,7 +211,10 @@ require_once 'header.php';
 require_once 'footer.php';
 
 // Clear service-related session data ONLY AFTER UI rendering
+unset($_SESssion data ONLY AFTER UI rendering
 unset($_SESSION['pending_payment']);
+unset($_SESSION['book_appointment']);
+unset($_SESSION['appointment_products']);
 
 // DELETE from pending_payments after successful insertion/confirmation
 try {
@@ -439,5 +223,3 @@ try {
 } catch (Throwable $e) {
     error_log('Failed to delete pending_payments record for payment_id=' . $payment_id . '. Error: ' . $e->getMessage());
 }
-
-} // END if ($paymentSource !== 'appointment')
