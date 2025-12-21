@@ -176,7 +176,7 @@ if ($paymentSource === 'appointment') {
         </div>
         <div style="color:#333;margin-bottom:18px;">Your appointment payment is received. We will contact you shortly to confirm the final time slot.</div>
         <a href="services.php" class="pay-btn" style="display:inline-block;width:auto;padding:12px 28px;">Back to Services</a>
-    </div>
+	</div>
 </main>
 <?php require_once 'footer.php'; ?>
 <style>
