@@ -201,40 +201,57 @@ if ($category === 'appointment') {
     // All logic handled above in appointments table
     exit;
 }
-// ...existing code for other categories...
-    $stmt->execute([
-        ':tracking_id'       => $tracking_id,
-        ':category_slug'     => $category,
-        ':customer_name'     => $customerName,
-        ':mobile'            => $mobile,
-        ':email'             => $email,
-        ':city'              => $city,
-        ':form_data'         => json_encode($formData),
-        ':selected_products' => json_encode($selectedProducts),
-        ':total_amount'      => $totalAmount,
-        ':payment_id'        => $paymentId,
-        ':payment_status'    => 'Paid',
-        ':service_status'    => 'Received'
-    ]);
-    $trackingId = $tracking_id;
-    // Step 6: Save tracking
-    $stmtTrack = $pdo->prepare("
-        INSERT INTO tracking (
-            tracking_id,
-            customer_name,
-            mobile,
-            service_category,
-            service_status
-        ) VALUES (?, ?, ?, ?, ?)
-    ");
-    $stmtTrack->execute([
-        $trackingId,
-        $customerName,
-        $mobile,
-        $category,
-        'Received'
-    ]);
-}
+
+// Insert service request for non-appointment category
+$customerName = $pending['customer_details']['full_name'] ?? $pending['customer_name'] ?? '';
+$mobile = $pending['customer_details']['mobile'] ?? $pending['mobile'] ?? '';
+$email = $pending['customer_details']['email'] ?? $pending['email'] ?? '';
+$city = $pending['customer_details']['city'] ?? $pending['city'] ?? '';
+$formData = $pending['form_data'] ?? $pending['form'] ?? [];
+$selectedProducts = $pending['selected_products'] ?? $pending['products'] ?? [];
+$totalAmount = $pending['total_amount'] ?? 0;
+$paymentId = $payment_id;
+$categoryName = $category;
+
+$sql = "INSERT INTO service_requests (
+    tracking_id, category_slug, customer_name, mobile, email, city, form_data, selected_products, total_amount, payment_id, payment_status, service_status
+) VALUES (
+    :tracking_id, :category_slug, :customer_name, :mobile, :email, :city, :form_data, :selected_products, :total_amount, :payment_id, :payment_status, :service_status
+)";
+$stmt = $pdo->prepare($sql);
+$stmt->execute([
+    ':tracking_id'       => $tracking_id,
+    ':category_slug'     => $category,
+    ':customer_name'     => $customerName,
+    ':mobile'            => $mobile,
+    ':email'             => $email,
+    ':city'              => $city,
+    ':form_data'         => json_encode($formData),
+    ':selected_products' => json_encode($selectedProducts),
+    ':total_amount'      => $totalAmount,
+    ':payment_id'        => $paymentId,
+    ':payment_status'    => 'Paid',
+    ':service_status'    => 'Received'
+]);
+$trackingId = $tracking_id;
+// Step 6: Save tracking
+$stmtTrack = $pdo->prepare("
+    INSERT INTO tracking (
+        tracking_id,
+        customer_name,
+        mobile,
+        service_category,
+        service_status
+    ) VALUES (?, ?, ?, ?, ?)
+");
+$stmtTrack->execute([
+    $trackingId,
+    $customerName,
+    $mobile,
+    $category,
+    'Received'
+]);
+
 
 // Step 2 (cont): Prepare tracking link
 $trackingLink = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") .
