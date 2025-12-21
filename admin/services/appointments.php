@@ -118,6 +118,7 @@ if ($selectedDate !== null) {
             email,
             payment_status,
             service_status,
+            form_data,
             created_at
         FROM service_requests
         WHERE category_slug = 'appointment'
@@ -334,6 +335,7 @@ if (isset($pendingDates[$todayDate])) {
             <th>Customer Name</th>
             <th>Mobile</th>
             <th>Email</th>
+            <th>Preferred Date</th>
             <th>Payment</th>
             <th>Status</th>
             <th>Created At</th>
@@ -342,10 +344,21 @@ if (isset($pendingDates[$todayDate])) {
     <tbody>
         <?php if (empty($appointments)): ?>
             <tr>
-                <td colspan="8" class="no-data">No appointment bookings found.</td>
+                <td colspan="9" class="no-data">No appointment bookings found.</td>
             </tr>
         <?php else: ?>
             <?php foreach ($appointments as $a): ?>
+                <?php
+                    // Extract preferred_date from form_data JSON
+                    $formData = json_decode($a['form_data'], true) ?? [];
+                    $preferredDate = $formData['preferred_date'] ?? '';
+                    if ($preferredDate) {
+                        $dateObj = DateTime::createFromFormat('Y-m-d', $preferredDate);
+                        $displayDate = $dateObj ? $dateObj->format('d-M-Y') : $preferredDate;
+                    } else {
+                        $displayDate = '—';
+                    }
+                ?>
                 <tr>
                     <td>
                         <input type="checkbox" class="rowCheckbox" value="<?= (int)$a['id'] ?>">
@@ -354,6 +367,7 @@ if (isset($pendingDates[$todayDate])) {
                     <td><?= htmlspecialchars($a['customer_name']) ?></td>
                     <td><?= htmlspecialchars($a['mobile']) ?></td>
                     <td><?= htmlspecialchars($a['email']) ?></td>
+                    <td style="font-weight:600;color:#800000;"><?= htmlspecialchars($displayDate) ?></td>
                     <td><span class="status-badge payment-paid">Paid</span></td>
                     <td><span class="status-badge status-received">Pending</span></td>
                     <td><?= htmlspecialchars($a['created_at']) ?></td>
