@@ -296,7 +296,6 @@ error_log('Blocked service flow for appointment payment_id=' . $payment_id);
        - Explicit exit() enforces complete flow termination
        =============================================================== */
     exit;
-}
 
 /* ======================
    STEP 3: NORMAL SERVICE FLOW
