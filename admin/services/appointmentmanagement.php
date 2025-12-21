@@ -44,6 +44,9 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
 
     $appointments = [];
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
+        // ISOLATED SOURCE: Appointments are fetched ONLY from the appointments table
+        // This page has no connection to service_requests table or index.php
+        // Appointments remain here for specialized scheduling and status management
         $stmt = $pdo->prepare("
             SELECT id, customer_name, mobile, appointment_type, preferred_date, preferred_time_slot, payment_status, status, created_at
             FROM appointments 

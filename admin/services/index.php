@@ -216,7 +216,10 @@ if ($selectedCategory !== 'All') {
     $where[]  = 'category_slug = ?';
     $params[] = $selectedCategory;
 } else {
-    // Exclude appointment bookings from service_requests
+    // VISIBILITY CONTROL: When viewing "All Categories", explicitly exclude appointments
+    // Appointments with category_slug = 'appointment' are now stored in service_requests table
+    // but must be hidden from this generic service list and managed only in appointmentmanagement.php
+    // This filter ensures they don't appear in the main services list or search results
     $where[] = "category_slug != 'appointment'";
 }
 if ($search !== '') {

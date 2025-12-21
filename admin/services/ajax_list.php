@@ -30,6 +30,11 @@ if ($status !== 'All') {
 if ($category !== 'All') {
     $where[]  = 'category_slug = ?';
     $params[] = $category;
+} else {
+    // VISIBILITY CONTROL: Exclude appointment bookings from generic service list
+    // Appointments are managed separately in appointmentmanagement.php
+    // This ensures index.php shows only non-appointment services
+    $where[] = "category_slug != 'appointment'";
 }
 
 if ($search !== '') {
