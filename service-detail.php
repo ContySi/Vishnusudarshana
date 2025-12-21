@@ -7,8 +7,9 @@ $service = isset($_GET['service']) ? trim($_GET['service']) : '';
 $category = isset($_GET['category']) ? trim($_GET['category']) : '';
 
 // Service meta (icon, title, description)
+// Unified appointment service meta
 $serviceMeta = [
-    'book-appointment' => [
+    'appointment' => [
         'icon' => '📅',
         'title' => 'Book an Appointment',
         'description' => 'Schedule an online or offline appointment; final slot confirmed by our team.'
@@ -23,7 +24,7 @@ $serviceData = $serviceMeta[$service] ?? [
 
 // Product fetch for appointment
 $products = [];
-if ($service === 'book-appointment') {
+if ($service === 'appointment') {
     $stmt = $pdo->prepare('SELECT * FROM products WHERE category_slug = ? AND is_active = 1 ORDER BY price ASC');
     $stmt->execute(['appointment']);
     $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -219,7 +220,7 @@ document.addEventListener('DOMContentLoaded', function () {
         <p class="detail-description"><?php echo htmlspecialchars($serviceData['description']); ?></p>
     </section>
 
-    <?php if ($service === 'book-appointment'): ?>
+    <?php if ($service === 'appointment'): ?>
     <!-- Procedure Section -->
     <section class="how-works-section">
         <h3>How This Service Works</h3>
@@ -235,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <section class="detail-section">
         <h3>Appointment Form</h3>
         <form class="appointment-form" method="post" action="service-review.php?category=appointment" id="appointmentForm">
-            <input type="hidden" name="service" value="book-appointment">
+            <input type="hidden" name="service" value="appointment">
             
             <div class="form-row">
                 <label>Full Name</label>

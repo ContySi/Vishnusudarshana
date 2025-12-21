@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $status = 'pending';
             $stmt->execute([
                 $serviceId,
-                'book-appointment',
+                'appointment',
                 $name,
                 $phone,
                 $appointmentType,

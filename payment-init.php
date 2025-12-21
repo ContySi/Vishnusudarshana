@@ -328,7 +328,7 @@ if ($source === 'appointment') {
     <?php endif; ?>
     <button class="pay-btn" id="rzpPayBtn" style="margin-top:18px;">Proceed to Secure Payment</button>
     <?php if ($source === 'appointment'): ?>
-    <a href="service-detail.php?service=book-appointment" class="review-back-link">&larr; Back to Appointment</a>
+    <a href="service-detail.php?service=appointment" class="review-back-link">&larr; Back to Appointment</a>
     <?php else: ?>
     <a href="service-review.php?category=<?php echo htmlspecialchars($category ?? ''); ?>" class="review-back-link">&larr; Back to Review</a>
     <?php endif; ?>

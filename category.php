@@ -2,18 +2,7 @@
 require_once 'header.php';
 $category = $_GET['category'] ?? '';
 
-// Add new book-appointment category
 $categories = [
-    'book-appointment' => [
-        'title' => 'Book an Appointment',
-        'description' => 'Schedule an online or offline appointment with Pandit Ji',
-        'services' => [
-            'Online Appointment',
-            'Offline Appointment',
-        ],
-        'delivery' => 'Online or Offline',
-        'type' => 'Booking',
-    ],
     'appointment' => [
         'title' => 'Appointment Booking',
         'description' => 'Schedule an online or offline appointment with Pandit Ji for personal consultation on astrology, vastu, rituals, or spiritual guidance.',
@@ -249,7 +238,7 @@ body {
         <div class="detail-icon-large">
             <?php // Use same icon as services.php for each category
             $icons = [
-                'book-appointment' => '📅',
+                // 'book-appointment' => '📅',
                 'appointment' => '📅',
                 'birth-child' => '👶',
                 'marriage-matching' => '💍',
@@ -294,7 +283,7 @@ body {
     </section>
     <!-- Proceed Button -->
     <section class="detail-section" style="text-align:center;">
-        <a class="proceed-btn maroon-btn" href="service-form.php?category=<?php echo urlencode($category); ?>">Proceed</a>
+           <a class="proceed-btn maroon-btn" href="service-form.php?category=appointment">Proceed</a>
         <div class="cat-helper-text">You will be asked to fill a simple form in the next step.</div>
     </section>
     <a href="services.php" style="display:block;text-align:center;margin-top:14px;color:#1a8917;font-size:0.98em;">&larr; Back to Services</a>

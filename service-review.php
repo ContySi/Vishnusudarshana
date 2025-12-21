@@ -7,16 +7,16 @@ session_start();
 $category = $_GET['category'] ?? '';
 $form_data = $_POST ?? [];
 
-if ($category === 'book-appointment') {
+if ($category === 'appointment') {
     // Validate session data
     if (!empty($form_data)) {
         $_SESSION['book_appointment'] = $form_data;
     } else if (!empty($_SESSION['book_appointment'])) {
         $form_data = $_SESSION['book_appointment'];
     }
-    // Fetch products for both 'appointment' and 'book-appointment'
-    $stmt = $pdo->prepare('SELECT * FROM products WHERE (category_slug = ? OR category_slug = ?) AND is_active = 1 ORDER BY price ASC');
-    $stmt->execute(['appointment', 'book-appointment']);
+    // Fetch products for 'appointment'
+    $stmt = $pdo->prepare('SELECT * FROM products WHERE category_slug = ? AND is_active = 1 ORDER BY price ASC');
+    $stmt->execute(['appointment']);
     $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     // Backend validation
     $required = ['full_name', 'mobile', 'appointment_type', 'preferred_date', 'preferred_time'];
@@ -54,7 +54,7 @@ if ($category === 'book-appointment') {
         echo '<ul style="color:#d00;">';
         foreach ($errors as $err) echo '<li>' . htmlspecialchars($err) . '</li>';
         echo '</ul>';
-        echo '<a href="service-form.php?category=book-appointment">&larr; Back to Appointment Form</a>';
+        echo '<a href="service-form.php?category=appointment">&larr; Back to Appointment Form</a>';
         exit;
     }
 } else {

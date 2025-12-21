@@ -12,7 +12,7 @@ function redirect_to(string $url): void {
 
 // 1) Accept POST request only; block direct GET access
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-	redirect_to('service-detail.php?service=book-appointment');
+	redirect_to('service-detail.php?service=appointment');
 }
 
 // 2) Gather and normalize inputs (accept synonyms for compatibility)
@@ -95,7 +95,7 @@ if (!empty($errors)) {
 		'email' => $email,
 		'notes' => $notes,
 	];
-	redirect_to('service-detail.php?service=book-appointment');
+	redirect_to('service-detail.php?service=appointment');
 }
 
 // 3) Ensure table exists (idempotent); includes service_id column
@@ -233,7 +233,7 @@ try {
 				'quantities' => $quantities,
 			];
 		}
-		redirect_to('service-detail.php?service=book-appointment&submitted=1&appointment_id=' . urlencode((string)$appointmentId));
+		redirect_to('service-detail.php?service=appointment&submitted=1&appointment_id=' . urlencode((string)$appointmentId));
 	}
 } catch (Throwable $e) {
 	error_log('Appointment insert failed: ' . $e->getMessage());
@@ -248,6 +248,6 @@ try {
 		'email' => $email,
 		'notes' => $notes,
 	];
-	redirect_to('service-detail.php?service=book-appointment');
+	redirect_to('service-detail.php?service=appointment');
 }
 

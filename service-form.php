@@ -3,7 +3,7 @@ require_once 'header.php';
 $category = $_GET['category'] ?? '';
 
 $categories = [
-    'appointment' => 'Appointment Booking',
+    'appointment' => 'Book an Appointment',
     'birth-child' => 'Birth & Child Services',
     'marriage-matching' => 'Marriage & Matching',
     'astrology-consultation' => 'Astrology Consultation',
@@ -80,8 +80,8 @@ unset($fields);
 ?>
 <main class="main-content">
     <h1 class="form-title"><?php echo htmlspecialchars($categories[$category]); ?> — Service Form</h1>
-    <?php if ($category === 'book-appointment'): ?>
-    <form method="post" action="service-review.php?category=book-appointment" class="service-form" autocomplete="off">
+    <?php if ($category === 'appointment'): ?>
+    <form method="post" action="service-review.php?category=<?php echo urlencode($category); ?>" class="service-form" autocomplete="off">
         <section class="form-section">
             <h2 class="form-section-title">Appointment Details</h2>
             <div class="form-group">
