@@ -158,15 +158,6 @@ h1 { color: #800000; margin-bottom: 18px; }
                 <?php endif; ?>
                 </tbody>
             </table>
-                                <td><?= htmlspecialchars($createdDisplay) ?></td>
-                                <td>
-                                    <a href="view.php?id=<?= (int)$a['id'] ?>" class="view-btn" style="padding:6px 14px;background:#007bff;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">View</a>
-                                </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-                </tbody>
-            </table>
         </form>
     <?php endif; ?>
 </div>
