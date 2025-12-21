@@ -7,8 +7,39 @@ require_once __DIR__ . '/helpers/send_whatsapp.php';
 // Step 2: Validate payment_id
 $payment_id = $_GET['payment_id'] ?? '';
 if (!$payment_id) {
-    echo '<main class="main-content"><h2>Missing payment ID</h2><a href="services.php" class="review-back-link">&larr; Back to Home</a></main>';
+    // Friendly fallback: redirect to home with message
+    header('Location: services.php?msg=missing_payment_id');
+    exit;
+}
+
+// Step 2.1: Detect payment source by session or GET param or payment_id
+$isAppointment = false;
+if ((isset($_SESSION['pending_payment_source']) && $_SESSION['pending_payment_source'] === 'appointment') || (isset($_GET['source']) && $_GET['source'] === 'appointment')) {
+    $isAppointment = true;
+}
+$appointment = null;
+if ($isAppointment) {
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM appointments WHERE transaction_ref = ? LIMIT 1");
+        $stmt->execute([$payment_id]);
+        $appointment = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) { $appointment = null; }
+}
+if ($isAppointment && !$appointment) {
+    // Fallback: show friendly message and link to home
+    echo '<main class="main-content"><h2>Appointment not found or already processed.</h2><a href="services.php" class="review-back-link">&larr; Back to Home</a></main>';
     require_once 'footer.php';
+    exit;
+}
+if ($appointment) {
+    // Appointment payment detected, finalize and redirect
+    if ($appointment['payment_status'] !== 'paid') {
+        $update = $pdo->prepare("UPDATE appointments SET payment_status = 'paid', transaction_ref = ? WHERE id = ?");
+        $update->execute([$payment_id, $appointment['id']]);
+    }
+    // Redirect to appointment confirmation page
+    $trackingId = 'APT-' . str_pad($appointment['id'], 6, '0', STR_PAD_LEFT);
+    header('Location: appointment-confirmation.php?tracking_id=' . urlencode($trackingId));
     exit;
 }
 
@@ -55,8 +86,9 @@ if (empty($pending)) {
 
 $paymentSource = $pending['source'] ?? 'service';
 
+
 if ($paymentSource === 'appointment') {
-    // Insert appointment record post-payment or update legacy record
+    // Insert or update appointment record post-payment
     $appointmentId = $pending['appointment_id'] ?? null;
     $customer = $pending['customer_details'] ?? [];
     $form = $pending['appointment_form'] ?? [];
@@ -64,7 +96,7 @@ if ($paymentSource === 'appointment') {
     $mobile = $customer['mobile'] ?? '';
     $email = $customer['email'] ?? '';
 
-    // Check for duplicate payment_id to prevent duplicate appointments
+    // Prevent duplicate appointment for same payment
     if (!$appointmentId) {
         $dupCheck = $pdo->prepare("SELECT id FROM appointments WHERE transaction_ref = ?");
         $dupCheck->execute([$payment_id]);
@@ -75,71 +107,15 @@ if ($paymentSource === 'appointment') {
     }
 
     if ($appointmentId) {
-        // Legacy update path or duplicate prevention
+        // Update payment status for existing appointment
         $hasUpdatedAt = false;
         try { $colCheck = $pdo->query("SHOW COLUMNS FROM appointments LIKE 'updated_at'"); $hasUpdatedAt = (bool)$colCheck->fetch(); } catch (Throwable $e) {}
-        // Only for new insert (not update)
-        // Refined: Only auto-accept if a slot is available
-        if ($isNewAppointment && isset($appointmentData['preferred_date'])) {
-            $date = $appointmentData['preferred_date'];
-            // Get all accepted appointments for this date, ordered by assigned_from_time
-            $slots = [];
-            $slotStmt = $pdo->prepare("SELECT assigned_from_time, assigned_to_time FROM appointments WHERE preferred_date = ? AND status = 'accepted' AND assigned_from_time IS NOT NULL AND assigned_to_time IS NOT NULL ORDER BY assigned_from_time ASC");
-            $slotStmt->execute([$date]);
-            while ($row = $slotStmt->fetch(PDO::FETCH_ASSOC)) {
-                $slots[] = [$row['assigned_from_time'], $row['assigned_to_time']];
-            }
-            // Determine available window from form (if any)
-            $windowStart = '09:00:00';
-            $windowEnd = '18:00:00';
-            if (!empty($appointmentData['time_from']) && !empty($appointmentData['time_to'])) {
-                $windowStart = $appointmentData['time_from'];
-                $windowEnd = $appointmentData['time_to'];
-            }
-            $slotDuration = 30 * 60;
-            $nextStart = strtotime($windowStart);
-            $end = strtotime($windowEnd);
-            $slotAssigned = false;
-            foreach ($slots as $s) {
-                $slotS = strtotime($s[0]);
-                $slotE = strtotime($s[1]);
-                if ($nextStart + $slotDuration <= $slotS) break;
-                $nextStart = $slotE;
-            }
-            if ($nextStart + $slotDuration <= $end) {
-                $assigned_from = date('H:i:s', $nextStart);
-                $assigned_to = date('H:i:s', $nextStart + $slotDuration);
-                // Assign slot and mark as accepted
-                $assignStmt = $pdo->prepare("UPDATE appointments SET assigned_date = ?, assigned_from_time = ?, assigned_to_time = ?, status = 'accepted' WHERE id = ?");
-                $assignStmt->execute([$date, $assigned_from, $assigned_to, $newAppointmentId]);
-                $slotAssigned = true;
-                // WhatsApp notification on acceptance
-                try {
-                    $custStmt = $pdo->prepare("SELECT customer_name, mobile FROM appointments WHERE id = ?");
-                    $custStmt->execute([$newAppointmentId]);
-                    $cust = $custStmt->fetch(PDO::FETCH_ASSOC);
-                    if ($cust && !empty($cust['mobile'])) {
-                        $slotText = date('h:i A', strtotime($assigned_from)) . ' - ' . date('h:i A', strtotime($assigned_to));
-                        sendWhatsAppMessage(
-                            $cust['mobile'],
-                            'appointment_accepted',
-                            'en',
-                            [
-                                'name' => $cust['customer_name'],
-                                'date' => date('d M Y', strtotime($date)),
-                                'slot' => $slotText
-                            ]
-                        );
-                    }
-                } catch (Throwable $e) { error_log('WhatsApp appointment acceptance failed: ' . $e->getMessage()); }
-            } // else: No slot available, keep as pending
-        }
         $stmt = $hasUpdatedAt
             ? $pdo->prepare("UPDATE appointments SET payment_status = 'paid', transaction_ref = ?, updated_at = NOW() WHERE id = ?")
             : $pdo->prepare("UPDATE appointments SET payment_status = 'paid', transaction_ref = ? WHERE id = ?");
         $stmt->execute([$payment_id, $appointmentId]);
     } else {
-        // New path: insert appointment now that payment succeeded
+        // Insert new appointment
         $hasServiceId = false; $hasProductId = false; $hasUpdatedAt = false;
         try { $hasServiceId = (bool)$pdo->query("SHOW COLUMNS FROM appointments LIKE 'service_id'")->fetch(); } catch (Throwable $e) {}
         try { $hasProductId = (bool)$pdo->query("SHOW COLUMNS FROM appointments LIKE 'product_id'")->fetch(); } catch (Throwable $e) {}
@@ -187,7 +163,6 @@ if ($paymentSource === 'appointment') {
     }
 
     $trackingId = 'APT-' . str_pad($appointmentId, 6, '0', STR_PAD_LEFT);
-    // Clear session
     unset($_SESSION['pending_payment']);
     unset($_SESSION['appointment_products']);
 
@@ -214,9 +189,9 @@ if ($paymentSource === 'appointment') {
 .review-back-link { display:block;text-align:center;margin-top:18px;color:#1a8917;font-size:0.98em;text-decoration:none; }
 @media (max-width: 700px) { .main-content { padding: 8px 2px 16px 2px; border-radius: 0; } }
 </style>
-        <?php
-        exit;
-    }
+    <?php
+    exit;
+}
 
 
 // Original service payment flow (skip for appointment category)

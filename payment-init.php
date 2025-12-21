@@ -3,9 +3,17 @@ session_start();
 require_once 'header.php';
 require_once __DIR__ . '/config/db.php';
 
+
 // Detect source: appointment or service
 $source = $_GET['source'] ?? '';
 $appointmentId = $_GET['appointment_id'] ?? null;
+
+// Always set payment context in session and pass as GET param to payment gateway/callback
+if ($source === 'appointment') {
+    $_SESSION['pending_payment_source'] = 'appointment';
+} else {
+    $_SESSION['pending_payment_source'] = 'service';
+}
 
 if ($source === 'appointment') {
     // Appointment payment flow: prefer session data; fallback to existing record when id given
@@ -170,6 +178,17 @@ if ($source === 'appointment') {
     // For UI after preparing session
     $pending = $_SESSION['pending_payment'] ?? [];
     $customer = $pending['customer_details'] ?? $customer ?? [];
+
+    // When redirecting to payment gateway, append source=appointment to callback URL
+    if (!empty($pending)) {
+        if (isset($pending['payment_callback_url'])) {
+            $cb = $pending['payment_callback_url'];
+            if (strpos($cb, 'source=') === false) {
+                $cb .= (strpos($cb, '?') === false ? '?' : '&') . 'source=appointment';
+                $_SESSION['pending_payment']['payment_callback_url'] = $cb;
+            }
+        }
+    }
 } else {
     // Existing service payment flow
     $category = $_POST['category'] ?? '';
