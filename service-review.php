@@ -1,9 +1,10 @@
+
 <?php
+session_start();
 require_once 'header.php';
 require_once __DIR__ . '/config/db.php';
 
 // Step 2: Read input
-session_start();
 $category = $_GET['category'] ?? '';
 $form_data = $_POST ?? [];
 

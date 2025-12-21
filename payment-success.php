@@ -257,22 +257,29 @@ $stmtTrack->execute([
 $trackingLink = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") .
     "://" . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']) . "/track.php?tracking_id=" . urlencode($trackingId);
 
-// Step 3: Call WhatsApp function (with error safety)
-try {
-    sendWhatsAppMessage(
-        $mobileNumber,
-        'payment_success',
-        'en',
-        [
-            'name' => $customerName,
-            'tracking_id' => $trackingId,
-            'category' => $categoryName,
-            'tracking_link' => $trackingLink
-        ]
-    );
-} catch (Throwable $e) {
-    error_log('WhatsApp notification failed: ' . $e->getMessage());
-    // Do not interrupt page rendering
+// Step 3: Call WhatsApp function (with error safety) for non-appointment services only
+if (
+    (isset($category) && $category !== 'appointment') &&
+    (isset($paymentSource) && $paymentSource !== 'appointment')
+) {
+    if (!empty($mobile)) {
+        try {
+            sendWhatsAppMessage(
+                $mobile,
+                'payment_success',
+                'en',
+                [
+                    'name' => $customerName,
+                    'tracking_id' => $trackingId,
+                    'category' => $categoryName,
+                    'tracking_link' => $trackingLink
+                ]
+            );
+        } catch (Throwable $e) {
+            error_log('WhatsApp notification failed: ' . $e->getMessage());
+            // Do not interrupt page rendering
+        }
+    }
 }
 // Step 7: Clear session
 unset($_SESSION['pending_payment']);
