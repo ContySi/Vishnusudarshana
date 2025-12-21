@@ -1,0 +1,160 @@
+<?php
+/**
+ * admin/services/completed-appointments.php
+ *
+ * Completed Appointments: Read-only listing
+ * Data source: service_requests table
+ */
+
+require_once __DIR__ . '/../../config/db.php';
+
+// --- SUMMARY STATS ---
+// Completed Today
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM service_requests WHERE category_slug = 'appointment' AND payment_status = 'Paid' AND service_status = 'Completed' AND DATE(updated_at) = CURDATE()");
+$stmt->execute();
+$completedToday = (int)$stmt->fetchColumn();
+// Total Completed
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM service_requests WHERE category_slug = 'appointment' AND payment_status = 'Paid' AND service_status = 'Completed'");
+$stmt->execute();
+$totalCompleted = (int)$stmt->fetchColumn();
+
+// --- DATE FILTERING ---
+$whereCompleted = "
+    category_slug = 'appointment' AND payment_status = 'Paid' AND service_status = 'Completed' AND
+    COALESCE(JSON_UNQUOTE(JSON_EXTRACT(form_data,'$.assigned_date')), '') <> ''
+";
+
+$dateRows = [];
+$stmt = $pdo->prepare("SELECT JSON_UNQUOTE(JSON_EXTRACT(form_data,'$.assigned_date')) AS ad, COUNT(*) AS c FROM service_requests WHERE $whereCompleted GROUP BY ad ORDER BY ad DESC");
+$stmt->execute();
+foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    // Only include today and past dates
+    if ($row['ad'] && $row['ad'] <= date('Y-m-d')) {
+        $dateRows[$row['ad']] = (int)$row['c'];
+    }
+}
+
+// Default selected date: today if exists, else latest completed date
+$selectedDate = null;
+$today = date('Y-m-d');
+if (isset($dateRows[$today])) {
+    $selectedDate = $today;
+} elseif (!empty($dateRows)) {
+    $selectedDate = array_key_first($dateRows);
+}
+
+// --- FETCH COMPLETED APPOINTMENTS FOR SELECTED DATE ---
+$appointments = [];
+if ($selectedDate !== null) {
+    $sql = "
+        SELECT id, tracking_id, customer_name, mobile, email, payment_status, service_status, form_data, created_at
+        FROM service_requests
+        WHERE $whereCompleted
+          AND JSON_UNQUOTE(JSON_EXTRACT(form_data,'$.assigned_date')) = ?
+        ORDER BY created_at ASC
+    ";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$selectedDate]);
+    $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Completed Appointments</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { font-family: Arial, sans-serif; background: #f7f7fa; margin: 0; }
+.admin-container { max-width: 1100px; margin: 0 auto; padding: 24px 12px; }
+h1 { color: #800000; margin-bottom: 18px; }
+.summary-cards { display: flex; gap: 18px; margin-bottom: 24px; flex-wrap: wrap; }
+.summary-card { flex: 1 1 180px; background: #fffbe7; border-radius: 14px; padding: 16px; text-align: center; box-shadow: 0 2px 8px #e0bebe22; }
+.summary-count { font-size: 2.2em; font-weight: 700; color: #800000; }
+.summary-label { font-size: 1em; color: #444; }
+.filter-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 18px; }
+#dateSelect { padding: 8px 12px; border-radius: 6px; border: 1px solid #ddd; min-width: 260px; }
+.service-table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 2px 12px #e0bebe22; border-radius: 12px; overflow: hidden; }
+.service-table th, .service-table td { padding: 12px 10px; border-bottom: 1px solid #f3caca; text-align: left; }
+.service-table th { background: #f9eaea; color: #800000; }
+.no-data { text-align: center; color: #777; padding: 24px; }
+.status-badge { padding: 4px 12px; border-radius: 8px; font-weight: 600; font-size: 0.9em; display: inline-block; min-width: 80px; text-align: center; }
+.status-completed { background: #e5ffe5; color: #1a8917; }
+.payment-paid { background: #e5ffe5; color: #1a8917; }
+</style>
+</head>
+<body>
+<div class="admin-container">
+    <h1>Completed Appointments</h1>
+    <div class="summary-cards">
+        <div class="summary-card">
+            <div class="summary-count"><?= $completedToday ?></div>
+            <div class="summary-label">Completed Today</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-count"><?= $totalCompleted ?></div>
+            <div class="summary-label">Total Completed</div>
+        </div>
+    </div>
+    <?php if (empty($dateRows)): ?>
+        <div class="no-data" style="font-size:1.1em;color:#800000;font-weight:600;">No completed appointments found.</div>
+    <?php else: ?>
+        <div class="filter-bar">
+            <label for="dateSelect">Select Date</label>
+            <select id="dateSelect" onchange="window.location.href='?date=' + this.value;">
+                <?php foreach ($dateRows as $date => $count): $dobj = DateTime::createFromFormat('Y-m-d', $date); $disp = $dobj ? $dobj->format('d-M-Y') : $date; $selected = ($date === $selectedDate) ? 'selected' : ''; ?>
+                    <option value="<?= htmlspecialchars($date) ?>" <?= $selected ?>><?= htmlspecialchars($disp) ?> — <?= (int)$count ?> Completed</option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <table class="service-table">
+            <thead>
+                <tr>
+                    <th>Tracking ID</th>
+                    <th>Customer Name</th>
+                    <th>Mobile</th>
+                    <th>Email</th>
+                    <th>Preferred Date</th>
+                    <th>Payment Status</th>
+                    <th>Service Status</th>
+                    <th>Created Date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php if (empty($appointments)): ?>
+                <tr><td colspan="9" class="no-data">No appointment bookings found.</td></tr>
+            <?php else: ?>
+                <?php foreach ($appointments as $a):
+                    $formData = json_decode($a['form_data'], true) ?? [];
+                    $preferredDate = $formData['preferred_date'] ?? '';
+                    $preferredDisplay = $preferredDate ? (DateTime::createFromFormat('Y-m-d', $preferredDate)?->format('d-M-Y') ?: $preferredDate) : '—';
+                    $createdDisplay = '';
+                    if (!empty($a['created_at'])) {
+                        $co = new DateTime($a['created_at']);
+                        $createdDisplay = $co->format('d-M-Y');
+                    }
+                ?>
+                    <tr>
+                        <td><?= htmlspecialchars($a['tracking_id']) ?></td>
+                        <td><?= htmlspecialchars($a['customer_name']) ?></td>
+                        <td><?= htmlspecialchars($a['mobile']) ?></td>
+                        <td><?= htmlspecialchars($a['email']) ?></td>
+                        <td style="font-weight:600;color:#800000;">
+                            <?= htmlspecialchars($preferredDisplay) ?>
+                        </td>
+                        <td><span class="status-badge payment-paid">Paid</span></td>
+                        <td><span class="status-badge status-completed">Completed</span></td>
+                        <td><?= htmlspecialchars($createdDisplay) ?></td>
+                        <td>
+                            <a href="view.php?id=<?= (int)$a['id'] ?>" class="view-btn" style="padding:6px 14px;background:#007bff;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">View</a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+</div>
+</body>
+</html>
