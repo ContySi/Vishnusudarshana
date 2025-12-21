@@ -34,35 +34,27 @@ if ($payment_id === '') {
     exit;
 }
 
-// Read pending payment from session, or fall back to database if session lost
-$pending = $_SESSION['pending_payment'] ?? [];
+// LOAD FROM DATABASE FIRST (source of truth for all payment types)
+$stmt = $pdo->prepare("SELECT * FROM pending_payments WHERE payment_id = ?");
+$stmt->execute([$payment_id]);
+$dbRecord = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// If session data is empty, try to retrieve from database (SOURCE OF TRUTH)
-if (empty($pending)) {
-    // Create pending_payments table if not exists
-    
-    
-    // Query database as source of truth when session is unavailable
-    $stmt = $pdo->prepare("SELECT * FROM pending_payments WHERE payment_id = ?");
-    $stmt->execute([$payment_id]);
-    $dbRecord = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if ($dbRecord) {
-        // Reconstruct pending payment from database (SOURCE OF TRUTH)
-        $pending = [
-            'source' => $dbRecord['source'],
-            'customer_details' => json_decode($dbRecord['customer_details'], true) ?? [],
-            'appointment_form' => json_decode($dbRecord['appointment_form'], true) ?? [],
-            'form_data' => json_decode($dbRecord['form_data'], true) ?? [],
-            'products' => json_decode($dbRecord['selected_products'], true) ?? [],
-            'category' => $dbRecord['category'],
-            'total_amount' => $dbRecord['total_amount']
-        ];
-        // Restore to session for consistency
-        $_SESSION['pending_payment'] = $pending;
-    } else {
-        error_log('No pending payment found in database for payment_id: ' . $payment_id);
-    }
+// Reconstruct pending payment data from database
+$pending = [];
+if ($dbRecord) {
+    $pending = [
+        'source' => $dbRecord['source'],
+        'customer_details' => json_decode($dbRecord['customer_details'], true) ?? [],
+        'appointment_form' => json_decode($dbRecord['appointment_form'], true) ?? [],
+        'form_data' => json_decode($dbRecord['form_data'], true) ?? [],
+        'products' => json_decode($dbRecord['selected_products'], true) ?? [],
+        'category' => $dbRecord['category'],
+        'total_amount' => $dbRecord['total_amount']
+    ];
+    // Store in session for consistency with rest of codebase
+    $_SESSION['pending_payment'] = $pending;
+} else {
+    error_log('No pending payment found in database for payment_id: ' . $payment_id);
 }
 
 // If context is missing after trying session and database, show friendly message
@@ -109,10 +101,10 @@ $paymentSource = $pending['source'] ?? 'service';
    ====================== */
 if ($paymentSource === 'appointment') {
 
-    // Use pending data from database as source of truth
-    // (Session may not be available after redirect)
+    // LOAD appointment_form from database (source of truth)
     $form = $pending['appointment_form'] ?? [];
 
+    // Map appointment_form fields to appointments table columns
     $customerName    = trim($form['full_name'] ?? '');
     $mobile          = trim($form['mobile'] ?? '');
     $email           = trim($form['email'] ?? '');
@@ -121,36 +113,58 @@ if ($paymentSource === 'appointment') {
     $preferredTime   = trim($form['preferred_time'] ?? '');
     $notes           = trim($form['notes'] ?? '');
 
-    // Validate required fields
-    $required = [
-        'customer_name'    => $customerName,
-        'mobile'           => $mobile,
-        'appointment_type' => $appointmentType,
-        'preferred_date'   => $preferredDate
-    ];
+    // Validate required fields exist
+    if ($customerName === '' || $mobile === '' || $appointmentType === '' || $preferredDate === '') {
+        error_log('Appointment payment ERROR: appointment_form missing required fields for payment_id=' . $payment_id . '. Data: ' . json_encode($form));
+        
+        // Show friendly error message (no technical details to user)
+        require_once 'header.php';
+        ?>
+        <main class="main-content">
+            <h1 class="review-title">Payment Received</h1>
 
-    $missing = [];
-    foreach ($required as $key => $val) {
-        if ($val === '') $missing[] = $key;
+            <div class="review-card">
+                <h2 class="section-title">Thank You!</h2>
+
+                <p class="success-text">
+                    Your payment has been received successfully.<br>
+                    Our team is processing your request.<br>
+                    <br>
+                    We will contact you shortly with details.
+                </p>
+
+                <a href="services.php" class="pay-btn">Back to Services</a>
+            </div>
+        </main>
+
+        <style>
+            .main-content { max-width:480px;margin:0 auto;padding:18px; }
+            .review-title { text-align:center;font-size:1.2em;margin-bottom:16px; }
+            .review-card { background:#f9eaea;border-radius:14px;padding:16px;text-align:center; }
+            .section-title { color:#800000;font-weight:600;margin-bottom:10px; }
+            .success-text { color:#333;margin-bottom:18px; }
+            .pay-btn { display:inline-block;background:#800000;color:#fff;padding:12px 28px;
+                       border-radius:8px;text-decoration:none;font-weight:600; }
+        </style>
+        <?php
+        require_once 'footer.php';
+        exit;
     }
 
-    if (!empty($missing)) {
-        error_log('Appointment payment: missing required fields: ' . implode(', ', $missing) . ' (payment_id=' . $payment_id . ')');
-        // Log but continue - generate tracking ID from payment_id for reference
-        // This allows recovery even with incomplete data
-    }
-
-    // Prevent duplicate appointment for same payment
+    // Check for duplicate appointment for same payment
     $stmt = $pdo->prepare("SELECT id FROM appointments WHERE transaction_ref = ? LIMIT 1");
     $stmt->execute([$payment_id]);
     $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    $appointmentId = null;
+
     if ($existing) {
+        // Duplicate detected - use existing appointment ID
         $appointmentId = (int)$existing['id'];
     } else {
-        // Insert appointment (log errors but continue)
+        // Insert NEW appointment into appointments table
         try {
-            $stmt = $pdo->prepare("
+            $insertStmt = $pdo->prepare("
                 INSERT INTO appointments (
                     customer_name,
                     mobile,
@@ -164,24 +178,57 @@ if ($paymentSource === 'appointment') {
                     transaction_ref,
                     created_at
                 ) VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, 'pending', 'paid', ?, NOW()
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW()
                 )
             ");
-            $stmt->execute([
-                $customerName ?: 'N/A',
-                $mobile ?: 'N/A',
+            $insertStmt->execute([
+                $customerName,
+                $mobile,
                 $email ?: null,
-                $appointmentType ?: 'online',
-                $preferredDate ?: date('Y-m-d'),
+                $appointmentType,
+                $preferredDate,
                 $preferredTime ?: null,
                 $notes ?: null,
-                $payment_id
+                'pending',      // status
+                'paid',         // payment_status
+                $payment_id     // transaction_ref
             ]);
             $appointmentId = (int)$pdo->lastInsertId();
+            error_log('Appointment inserted: id=' . $appointmentId . ', payment_id=' . $payment_id);
         } catch (Throwable $e) {
-            error_log('Appointment insert failed: ' . $e->getMessage() . ' (payment_id=' . $payment_id . ')');
-            // Generate ID from payment_id as fallback for tracking
-            $appointmentId = (int)substr(str_replace('-', '', $payment_id), 0, 6) ?: 999999;
+            error_log('CRITICAL: Appointment insert FAILED for payment_id=' . $payment_id . '. Error: ' . $e->getMessage());
+            // Fail gracefully with user-friendly message
+            require_once 'header.php';
+            ?>
+            <main class="main-content">
+                <h1 class="review-title">Payment Received</h1>
+
+                <div class="review-card">
+                    <h2 class="section-title">Thank You!</h2>
+
+                    <p class="success-text">
+                        Your payment has been received successfully.<br>
+                        Our team is processing your request.<br>
+                        <br>
+                        We will contact you shortly with details.
+                    </p>
+
+                    <a href="services.php" class="pay-btn">Back to Services</a>
+                </div>
+            </main>
+
+            <style>
+                .main-content { max-width:480px;margin:0 auto;padding:18px; }
+                .review-title { text-align:center;font-size:1.2em;margin-bottom:16px; }
+                .review-card { background:#f9eaea;border-radius:14px;padding:16px;text-align:center; }
+                .section-title { color:#800000;font-weight:600;margin-bottom:10px; }
+                .success-text { color:#333;margin-bottom:18px; }
+                .pay-btn { display:inline-block;background:#800000;color:#fff;padding:12px 28px;
+                           border-radius:8px;text-decoration:none;font-weight:600; }
+            </style>
+            <?php
+            require_once 'footer.php';
+            exit;
         }
     }
 
@@ -226,6 +273,15 @@ if ($paymentSource === 'appointment') {
     <?php
     require_once 'footer.php';
     
+    // DELETE from pending_payments after successful insertion/confirmation
+    try {
+        $deleteStmt = $pdo->prepare("DELETE FROM pending_payments WHERE payment_id = ?");
+        $deleteStmt->execute([$payment_id]);
+    } catch (Throwable $e) {
+        error_log('Failed to delete pending_payments record for payment_id=' . $payment_id . '. Error: ' . $e->getMessage());
+    }
+    
+
     // Clear appointment-related session data ONLY AFTER UI rendering
     unset($_SESSION['pending_payment']);
     unset($_SESSION['book_appointment']);
@@ -361,4 +417,11 @@ require_once 'footer.php';
 // Clear service-related session data ONLY AFTER UI rendering
 unset($_SESSION['pending_payment']);
 
-exit;
+// DELETE from pending_payments after successful insertion/confirmation
+try {
+    $deleteStmt = $pdo->prepare("DELETE FROM pending_payments WHERE payment_id = ?");
+    $deleteStmt->execute([$payment_id]);
+} catch (Throwable $e) {
+    error_log('Failed to delete pending_payments record for payment_id=' . $payment_id . '. Error: ' . $e->getMessage());
+}
+
