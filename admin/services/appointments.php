@@ -227,8 +227,58 @@ h1 {
     color: #777;
     padding: 24px;
 }
+/* Calendar CSS */
+.calendar-grid {
+    border-collapse: collapse;
+    margin-bottom: 10px;
+    width: 100%;
+    background: #fff;
+    box-shadow: 0 2px 8px #e0bebe22;
+    border-radius: 10px;
+}
+.calendar-grid th {
+    background: #f9eaea;
+    color: #800000;
+    font-weight: 600;
+    padding: 6px 0;
+}
+.calendar-day {
+    min-width: 36px;
+    min-height: 36px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    font-size: 1em;
+    margin: 2px;
+    padding: 4px 0;
+    background: #fffbe7;
+    color: #800000;
+    font-weight: 600;
+    transition: border 0.2s;
+}
+.calendar-day.active {
+    border: 2px solid #800000;
+    background: #ffe4b2;
+}
+.calendar-day.disabled {
+    background: #f7f7fa;
+    color: #aaa;
+    opacity: 0.3;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+.calendar-badge {
+    display: inline-block;
+    background: #800000;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 0.85em;
+    padding: 2px 7px;
+    margin-left: 4px;
+    font-weight: 700;
+}
 @media (max-width: 700px) {
     .summary-cards { flex-direction: column; }
+    .calendar-grid th, .calendar-grid td { font-size: 0.95em; }
 }
 </style>
 </head>
@@ -323,48 +373,129 @@ h1 {
 </div>
 
 <script>
-// PHASE 1 – DATA EXPORT
-const enabledDates = <?= json_encode(array_keys($pendingDates)) ?>;
-const calendarInput = document.getElementById('calendar-date');
-const selectAll = document.getElementById('selectAll');
-let lastValidDate = "<?= $selectedDate ?>";
+// PHASE 2 – DATA SOURCE
+const appointmentDates = <?= json_encode($pendingDates) ?>;
+const selectedDate = "<?= $selectedDate ?>";
+const calendarContainer = document.getElementById('calendar-container');
+const hiddenInput = document.getElementById('selectedDate');
+const calendarHelper = document.getElementById('calendar-helper');
 
-// PHASE 2 – CALENDAR RESTRICTION
-if (calendarInput) {
-    // Disable calendar if no enabled dates
-    if (enabledDates.length === 0) {
-        calendarInput.disabled = true;
-        document.getElementById('calendar-helper').textContent = 'No pending appointments available';
+function getMonthDays(year, month) {
+    // month: 0-based
+    return new Date(year, month + 1, 0).getDate();
+}
+function getFirstDayOfWeek(year, month) {
+    // 0 = Sunday
+    return new Date(year, month, 1).getDay();
+}
+function formatDate(y, m, d) {
+    return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+function renderCalendarGrid(year, month) {
+    // Clear
+    calendarContainer.innerHTML = '';
+    // Header
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const table = document.createElement('table');
+    table.className = 'calendar-grid';
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    daysOfWeek.forEach(d => {
+        const th = document.createElement('th');
+        th.textContent = d;
+        headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+    // Body
+    const tbody = document.createElement('tbody');
+    const daysInMonth = getMonthDays(year, month);
+    const firstDay = getFirstDayOfWeek(year, month);
+    let row = document.createElement('tr');
+    // Fill initial empty cells
+    for (let i = 0; i < firstDay; i++) {
+        row.appendChild(document.createElement('td'));
     }
-
-    calendarInput.addEventListener('change', function () {
-        if (!enabledDates.includes(this.value)) {
-            alert('No appointments on this date');
-            this.value = lastValidDate;
-            return;
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = formatDate(year, month, day);
+        const td = document.createElement('td');
+        if (appointmentDates[dateStr]) {
+            const btn = document.createElement('button');
+            btn.className = 'calendar-day';
+            btn.setAttribute('data-date', dateStr);
+            btn.innerHTML = day + ` <span class="calendar-badge">${appointmentDates[dateStr]}</span>`;
+            btn.style.background = '#fffbe7';
+            btn.style.cursor = 'pointer';
+            if (dateStr === selectedDate) {
+                btn.classList.add('active');
+                btn.style.border = '2px solid #800000';
+            }
+            btn.onclick = function() {
+                document.querySelectorAll('.calendar-day.active').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                btn.style.border = '2px solid #800000';
+                hiddenInput.value = dateStr;
+                // AJAX reload
+                fetch(`admin/services/appointments.php?date=${dateStr}&ajax=1`)
+                  .then(r => r.text())
+                  .then(html => {
+                    // Replace only table body
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newTbody = doc.querySelector('table.service-table tbody');
+                    const oldTbody = document.querySelector('table.service-table tbody');
+                    if (newTbody && oldTbody) {
+                        oldTbody.parentNode.replaceChild(newTbody, oldTbody);
+                    }
+                  });
+            };
+            td.appendChild(btn);
+        } else {
+            const div = document.createElement('div');
+            div.className = 'calendar-day disabled';
+            div.textContent = day;
+            div.style.opacity = 0.3;
+            div.style.pointerEvents = 'none';
+            div.style.cursor = 'not-allowed';
+            td.appendChild(div);
         }
-        lastValidDate = this.value;
-        window.location.href = '?date=' + this.value;
-    });
-
-    // Prevent manual typing of invalid dates
-    calendarInput.addEventListener('blur', function () {
-        if (!enabledDates.includes(this.value)) {
-            this.value = lastValidDate;
+        row.appendChild(td);
+        if ((firstDay + day) % 7 === 0) {
+            tbody.appendChild(row);
+            row = document.createElement('tr');
         }
-    });
+    }
+    // Fill trailing empty cells
+    if (row.children.length > 0) {
+        while (row.children.length < 7) row.appendChild(document.createElement('td'));
+        tbody.appendChild(row);
+    }
+    table.appendChild(tbody);
+    calendarContainer.appendChild(table);
 }
 
-// PHASE 3 – VISUAL UX IMPROVEMENTS (workaround for <input type="date"> limitations)
-// Add a faded look if calendar is disabled
-if (calendarInput && calendarInput.disabled) {
-    calendarInput.style.opacity = 0.5;
-    calendarInput.style.cursor = 'not-allowed';
+// PHASE 6 – FALLBACK
+if (Object.keys(appointmentDates).length === 0) {
+    calendarContainer.innerHTML = '';
+    calendarHelper.textContent = 'No pending appointments available';
+} else {
+    // Default to selectedDate's month, else current month
+    let y, m;
+    if (selectedDate) {
+        [y, m] = selectedDate.split('-');
+        y = parseInt(y, 10);
+        m = parseInt(m, 10) - 1;
+    } else {
+        const now = new Date();
+        y = now.getFullYear();
+        m = now.getMonth();
+    }
+    renderCalendarGrid(y, m);
 }
-
-// PHASE 4 – ACCESSIBILITY & FALLBACK handled above
 
 // Select/Deselect all checkboxes
+const selectAll = document.getElementById('selectAll');
 if (selectAll) {
     selectAll.addEventListener('change', function () {
         document.querySelectorAll('.rowCheckbox').forEach(cb => {
