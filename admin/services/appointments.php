@@ -10,66 +10,45 @@
 require_once __DIR__ . '/../../config/db.php';
 
 /* ============================================================
-   HANDLE ACCEPT & RESCHEDULE ACTIONS
+    HANDLE ACCEPT ACTION (Simplified)
    ============================================================ */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['action'])) {
-        $action = $_POST['action'];
+    if (isset($_POST['action']) && $_POST['action'] === 'accept') {
         $appointmentIds = $_POST['appointment_ids'] ?? [];
-        
-        if ($action === 'accept' && !empty($appointmentIds)) {
-            $assignedDate = $_POST['assigned_date'] ?? '';
-            $timeFrom = $_POST['time_from'] ?? '';
-            $timeTo = $_POST['time_to'] ?? '';
-            
-            // Validation
-            if ($assignedDate && $timeFrom && $timeTo && $timeFrom < $timeTo) {
-                $stmt = $pdo->prepare("
-                    UPDATE service_requests 
-                    SET service_status = 'Accepted',
-                        form_data = JSON_SET(
-                            form_data,
-                            '$.assigned_date', ?,
-                            '$.assigned_from_time', ?,
-                            '$.assigned_to_time', ?
-                        ),
-                        updated_at = NOW()
-                    WHERE id IN (" . implode(',', array_fill(0, count($appointmentIds), '?')) . ")
-                      AND category_slug = 'appointment'
-                      AND service_status = 'Received'
-                ");
-                $params = array_merge([$assignedDate, $timeFrom, $timeTo], $appointmentIds);
-                $stmt->execute($params);
-                
-                header('Location: appointments.php?success=accepted');
-                exit;
-            }
-        } elseif ($action === 'reschedule' && !empty($appointmentIds)) {
-            $newDate = $_POST['new_date'] ?? '';
-            
-            // Validation: new date must be today or future
-            if ($newDate && $newDate >= date('Y-m-d')) {
-                $stmt = $pdo->prepare("
-                    UPDATE service_requests 
-                    SET form_data = JSON_SET(form_data, '$.preferred_date', ?),
-                        service_status = 'Received',
-                        updated_at = NOW()
-                    WHERE id IN (" . implode(',', array_fill(0, count($appointmentIds), '?')) . ")
-                      AND category_slug = 'appointment'
-                ");
-                $params = array_merge([$newDate], $appointmentIds);
-                $stmt->execute($params);
-                
-                header('Location: appointments.php?success=rescheduled');
-                exit;
-            }
+        $assignedDate = $_POST['assigned_date'] ?? '';
+        $timeFrom = $_POST['time_from'] ?? '';
+        $timeTo = $_POST['time_to'] ?? '';
+
+        // Validation: required fields, time ordering, date not in past
+        if (!empty($appointmentIds) && $assignedDate && $timeFrom && $timeTo && $timeFrom < $timeTo && $assignedDate >= date('Y-m-d')) {
+            $placeholders = implode(',', array_fill(0, count($appointmentIds), '?'));
+            $sql = "
+                UPDATE service_requests
+                SET service_status = 'Accepted',
+                    form_data = JSON_SET(
+                        form_data,
+                        '$.assigned_date', ?,
+                        '$.assigned_from_time', ?,
+                        '$.assigned_to_time', ?
+                    ),
+                    updated_at = NOW()
+                WHERE id IN ($placeholders)
+                  AND category_slug = 'appointment'
+                  AND payment_status = 'Paid'
+            ";
+            $stmt = $pdo->prepare($sql);
+            $params = array_merge([$assignedDate, $timeFrom, $timeTo], $appointmentIds);
+            $stmt->execute($params);
+
+            header('Location: appointments.php?success=accepted');
+            exit;
         }
     }
 }
 
 /* ============================================================
-   PHASE 2.1 – DYNAMIC APPOINTMENT STATISTICS
+    DASHBOARD STATISTICS (Optional)
    ============================================================ */
 
 // Total appointments
@@ -127,36 +106,33 @@ $stmt->execute();
 $completedAppointments = (int)$stmt->fetchColumn();
 
 /* ============================================================
-   STEP 3.1 – FETCH PENDING APPOINTMENT DATES
+    FETCH UNACCEPTED APPOINTMENT DATES (DATE(created_at))
    ============================================================ */
 
 $pendingDates = [];
 
-$stmt = $pdo->prepare("
-    SELECT form_data
-    FROM service_requests
-    WHERE category_slug = 'appointment'
-      AND payment_status = 'Paid'
-      AND service_status = 'Received'
-");
-$stmt->execute();
+$whereUnaccepted = "
+    category_slug = 'appointment'
+    AND payment_status = 'Paid'
+    AND (
+        service_status IN ('Received','Pending')
+        OR (
+            service_status = 'Accepted'
+            AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(form_data,'$.assigned_date')), '') <> ''
+            AND JSON_UNQUOTE(JSON_EXTRACT(form_data,'$.assigned_date')) < CURDATE()
+        )
+    )
+";
 
-foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-    $formData = json_decode($row['form_data'], true) ?? [];
-    if (isset($formData['preferred_date']) && !empty($formData['preferred_date'])) {
-        $preferredDate = $formData['preferred_date'];
-        if (!isset($pendingDates[$preferredDate])) {
-            $pendingDates[$preferredDate] = 0;
-        }
-        $pendingDates[$preferredDate]++;
-    }
+$stmt = $pdo->prepare("SELECT DATE(created_at) AS d, COUNT(*) AS c FROM service_requests WHERE $whereUnaccepted GROUP BY DATE(created_at) ORDER BY DATE(created_at) ASC");
+$stmt->execute();
+$dateRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+foreach ($dateRows as $r) {
+    $pendingDates[$r['d']] = (int)$r['c'];
 }
 
-// Sort by date ascending
-ksort($pendingDates);
-
 /* ============================================================
-   STEP 3.2 – AUTO-SELECT OLDEST PENDING DATE
+    AUTO-SELECT OLDEST PENDING DATE
    ============================================================ */
 
 if (!empty($pendingDates)) {
@@ -170,39 +146,22 @@ if (!empty($pendingDates)) {
 }
 
 /* ============================================================
-   STEP 3.5 – FETCH APPOINTMENTS FOR SELECTED DATE
+    FETCH APPOINTMENTS FOR SELECTED DATE (Unaccepted criteria)
    ============================================================ */
 
 $appointments = [];
 
 if ($selectedDate !== null) {
-    $stmt = $pdo->prepare("
-        SELECT
-            id,
-            tracking_id,
-            customer_name,
-            mobile,
-            email,
-            payment_status,
-            service_status,
-            form_data,
-            created_at
+    $sqlList = "
+        SELECT id, tracking_id, customer_name, mobile, email, payment_status, service_status, form_data, created_at
         FROM service_requests
-        WHERE category_slug = 'appointment'
-          AND payment_status = 'Paid'
-          AND service_status = 'Received'
-    ");
-    $stmt->execute();
-    $allAppointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Filter by preferred_date from JSON
-    foreach ($allAppointments as $appointment) {
-        $formData = json_decode($appointment['form_data'], true) ?? [];
-        $preferredDate = $formData['preferred_date'] ?? '';
-        if ($preferredDate === $selectedDate) {
-            $appointments[] = $appointment;
-        }
-    }
+        WHERE $whereUnaccepted
+          AND DATE(created_at) = ?
+        ORDER BY created_at ASC
+    ";
+    $stmt = $pdo->prepare($sqlList);
+    $stmt->execute([$selectedDate]);
+    $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 ?>
 <!DOCTYPE html>
@@ -541,8 +500,7 @@ if (isset($pendingDates[$todayDate])) {
 <!-- PHASE 2 – ACTION BAR -->
 <div class="action-bar" id="actionBar">
     <span class="action-bar-label"><span id="selectedCount">0</span> appointment(s) selected</span>
-    <button class="action-btn btn-accept" onclick="openAcceptModal()">Accept Appointment</button>
-    <button class="action-btn btn-reschedule" onclick="openRescheduleModal()">Reschedule Appointment</button>
+    <button class="action-btn btn-accept" onclick="openAcceptModal()">Accept Selected</button>
 </div>
 
 <?php else: ?>
@@ -559,7 +517,7 @@ if (isset($pendingDates[$todayDate])) {
             <th>Customer Name</th>
             <th>Mobile</th>
             <th>Email</th>
-            <th>Preferred Date</th>
+            <th>Created Date</th>
             <th>Payment</th>
             <th>Status</th>
             <th>Created At</th>
@@ -573,38 +531,23 @@ if (isset($pendingDates[$todayDate])) {
         <?php else: ?>
             <?php foreach ($appointments as $a): ?>
                 <?php
-                    // Extract preferred_date from form_data JSON
-                    $formData = json_decode($a['form_data'], true) ?? [];
-                    $preferredDate = $formData['preferred_date'] ?? '';
-                    if ($preferredDate) {
-                        $dateObj = DateTime::createFromFormat('Y-m-d', $preferredDate);
-                        $displayDate = $dateObj ? $dateObj->format('d-M-Y') : $preferredDate;
-                    } else {
-                        $displayDate = '—';
-                    }
-                    
-                    // PHASE 1 – Identify old/past appointments
-                    $isOverdue = false;
-                    if ($preferredDate && $preferredDate < date('Y-m-d')) {
-                        $isOverdue = true;
+                    $createdDisplay = '';
+                    if (!empty($a['created_at'])) {
+                        $co = new DateTime($a['created_at']);
+                        $createdDisplay = $co->format('d-M-Y');
                     }
                 ?>
                 <tr>
                     <td>
-                        <input type="checkbox" class="rowCheckbox" value="<?= (int)$a['id'] ?>" data-date="<?= htmlspecialchars($preferredDate) ?>">
+                        <input type="checkbox" class="rowCheckbox" value="<?= (int)$a['id'] ?>" data-date="<?= htmlspecialchars($selectedDate) ?>">
                     </td>
                     <td><?= htmlspecialchars($a['tracking_id']) ?></td>
                     <td><?= htmlspecialchars($a['customer_name']) ?></td>
                     <td><?= htmlspecialchars($a['mobile']) ?></td>
                     <td><?= htmlspecialchars($a['email']) ?></td>
-                    <td style="font-weight:600;color:#800000;">
-                        <?= htmlspecialchars($displayDate) ?>
-                        <?php if ($isOverdue): ?>
-                            <span class="badge-overdue">Past Date</span>
-                        <?php endif; ?>
-                    </td>
+                    <td style="font-weight:600;color:#800000;"><?= htmlspecialchars($createdDisplay) ?></td>
                     <td><span class="status-badge payment-paid">Paid</span></td>
-                    <td><span class="status-badge status-received">Pending</span></td>
+                    <td><span class="status-badge status-received">Unaccepted</span></td>
                     <td><?= htmlspecialchars($a['created_at']) ?></td>
                 </tr>
             <?php endforeach; ?>
@@ -650,39 +593,7 @@ if (isset($pendingDates[$todayDate])) {
     </div>
 </div>
 
-<!-- PHASE 4 – RESCHEDULE APPOINTMENT MODAL -->
-<div class="modal" id="rescheduleModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>Reschedule Appointment</h2>
-            <button class="modal-close" onclick="closeRescheduleModal()">&times;</button>
-        </div>
-        <form method="POST" onsubmit="return validateRescheduleForm()">
-            <input type="hidden" name="action" value="reschedule">
-            <input type="hidden" name="appointment_ids[]" id="rescheduleAppointmentIds">
-            
-            <div class="form-group">
-                <label for="currentDate">Current Preferred Date</label>
-                <input type="text" id="currentDate" readonly style="background:#f5f5f5;">
-            </div>
-            
-            <div class="form-group">
-                <label for="newDate">New Appointment Date *</label>
-                <input type="date" id="newDate" name="new_date" required min="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d', strtotime('+30 days')) ?>">
-            </div>
-            
-            <div class="form-group">
-                <label for="rescheduleNote">Reason (Optional)</label>
-                <textarea id="rescheduleNote" name="note" placeholder="e.g., Customer requested date change"></textarea>
-            </div>
-            
-            <div class="modal-footer">
-                <button type="button" class="btn-cancel" onclick="closeRescheduleModal()">Cancel</button>
-                <button type="submit" class="btn-submit">Reschedule Appointment</button>
-            </div>
-        </form>
-    </div>
-</div>
+<!-- Reschedule removed in simplified flow -->
 
 <script>
 // Track selected appointments
@@ -701,7 +612,7 @@ function updateActionBar() {
     document.getElementById('actionBar').classList.toggle('show', count > 0);
 }
 
-// PHASE 3 – Accept Appointment Functions
+// Accept Appointment Functions (Simplified)
 function openAcceptModal() {
     if (selectedAppointments.length === 0) return;
     
@@ -709,13 +620,8 @@ function openAcceptModal() {
     const ids = selectedAppointments.map(a => a.id);
     document.getElementById('acceptAppointmentIds').value = ids.join(',');
     
-    // Set default assigned date to first selected appointment's preferred date
-    const firstDate = selectedAppointments[0].date;
-    if (firstDate && firstDate >= '<?= date('Y-m-d') ?>') {
-        document.getElementById('assignedDate').value = firstDate;
-    } else {
-        document.getElementById('assignedDate').value = '<?= date('Y-m-d') ?>';
-    }
+    // Default to today
+    document.getElementById('assignedDate').value = '<?= date('Y-m-d') ?>';
     
     document.getElementById('acceptModal').classList.add('show');
 }
@@ -751,55 +657,7 @@ function validateAcceptForm() {
     return true;
 }
 
-// PHASE 4 – Reschedule Appointment Functions
-function openRescheduleModal() {
-    if (selectedAppointments.length === 0) return;
-    
-    // Set appointment IDs
-    const ids = selectedAppointments.map(a => a.id);
-    document.getElementById('rescheduleAppointmentIds').value = ids.join(',');
-    
-    // Show current preferred date
-    const currentDate = selectedAppointments[0].date;
-    const dateObj = new Date(currentDate);
-    document.getElementById('currentDate').value = dateObj.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-    });
-    
-    document.getElementById('rescheduleModal').classList.add('show');
-}
-
-function closeRescheduleModal() {
-    document.getElementById('rescheduleModal').classList.remove('show');
-}
-
-function validateRescheduleForm() {
-    const newDate = document.getElementById('newDate').value;
-    
-    if (newDate < '<?= date('Y-m-d') ?>') {
-        alert('New date cannot be in the past');
-        return false;
-    }
-    
-    if (!confirm(`Reschedule ${selectedAppointments.length} appointment(s) to ${newDate}?`)) {
-        return false;
-    }
-    
-    // Convert single hidden input to multiple
-    const form = event.target;
-    form.querySelector('#rescheduleAppointmentIds').remove();
-    selectedAppointments.forEach(a => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'appointment_ids[]';
-        input.value = a.id;
-        form.appendChild(input);
-    });
-    
-    return true;
-}
+// Reschedule flow removed
 
 // Select/Deselect all checkboxes
 const selectAll = document.getElementById('selectAll');
