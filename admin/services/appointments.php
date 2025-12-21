@@ -517,20 +517,24 @@ if (isset($pendingDates[$todayDate])) {
             <th>Customer Name</th>
             <th>Mobile</th>
             <th>Email</th>
+            <th>Preferred Date</th>
+            <th>Payment Status</th>
+            <th>Service Status</th>
             <th>Created Date</th>
-            <th>Payment</th>
-            <th>Status</th>
-            <th>Created At</th>
+            <th>Action</th>
         </tr>
     </thead>
     <tbody>
         <?php if (empty($appointments)): ?>
             <tr>
-                <td colspan="9" class="no-data">No appointment bookings found.</td>
+                <td colspan="10" class="no-data">No appointment bookings found.</td>
             </tr>
         <?php else: ?>
             <?php foreach ($appointments as $a): ?>
                 <?php
+                    $formData = json_decode($a['form_data'], true) ?? [];
+                    $preferredDate = $formData['preferred_date'] ?? '';
+                    $preferredDisplay = $preferredDate ? (DateTime::createFromFormat('Y-m-d', $preferredDate)?->format('d-M-Y') ?: $preferredDate) : '—';
                     $createdDisplay = '';
                     if (!empty($a['created_at'])) {
                         $co = new DateTime($a['created_at']);
@@ -545,10 +549,15 @@ if (isset($pendingDates[$todayDate])) {
                     <td><?= htmlspecialchars($a['customer_name']) ?></td>
                     <td><?= htmlspecialchars($a['mobile']) ?></td>
                     <td><?= htmlspecialchars($a['email']) ?></td>
-                    <td style="font-weight:600;color:#800000;"><?= htmlspecialchars($createdDisplay) ?></td>
+                    <td style="font-weight:600;color:#800000;">
+                        <?= htmlspecialchars($preferredDisplay) ?>
+                    </td>
                     <td><span class="status-badge payment-paid">Paid</span></td>
                     <td><span class="status-badge status-received">Unaccepted</span></td>
-                    <td><?= htmlspecialchars($a['created_at']) ?></td>
+                    <td><?= htmlspecialchars($createdDisplay) ?></td>
+                    <td>
+                        <a href="view.php?id=<?= (int)$a['id'] ?>" class="view-btn" style="padding:6px 14px;background:#007bff;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">View</a>
+                    </td>
                 </tr>
             <?php endforeach; ?>
         <?php endif; ?>

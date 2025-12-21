@@ -136,14 +136,18 @@ h1 { color: #800000; margin-bottom: 18px; }
                 <?php else: ?>
                     <?php foreach ($appointments as $a): $fd = json_decode($a['form_data'], true) ?? []; $ad = $fd['assigned_date'] ?? ''; $ft = $fd['assigned_from_time'] ?? ''; $tt = $fd['assigned_to_time'] ?? ''; $adDisp = $ad ? (DateTime::createFromFormat('Y-m-d', $ad)?->format('d-M-Y') ?: $ad) : '—'; ?>
                         <tr>
-                            <td><input type="checkbox" class="rowCheckbox" value="<?= (int)$a['id'] ?>"></td>
-                            <td><?= htmlspecialchars($a['tracking_id']) ?></td>
-                            <td><?= htmlspecialchars($a['customer_name']) ?></td>
-                            <td><?= htmlspecialchars($a['mobile']) ?></td>
-                            <td style="font-weight:600;color:#800000;"><?= htmlspecialchars($adDisp) ?></td>
-                            <td><?= htmlspecialchars($ft ?: '—') ?></td>
-                            <td><?= htmlspecialchars($tt ?: '—') ?></td>
-                            <td><span class="status-badge status-accepted">Accepted</span></td>
+                                <td><input type="checkbox" class="rowCheckbox" value="<?= (int)$a['id'] ?>"></td>
+                                <td><?= htmlspecialchars($a['tracking_id']) ?></td>
+                                <td><?= htmlspecialchars($a['customer_name']) ?></td>
+                                <td><?= htmlspecialchars($a['mobile']) ?></td>
+                                <td><?= htmlspecialchars($fd['email'] ?? '') ?></td>
+                                <td style="font-weight:600;color:#800000;"><?= htmlspecialchars($preferredDisplay) ?></td>
+                                <td><span class="status-badge payment-paid">Paid</span></td>
+                                <td><span class="status-badge status-accepted">Accepted</span></td>
+                                <td><?= htmlspecialchars($createdDisplay) ?></td>
+                                <td>
+                                    <a href="view.php?id=<?= (int)$a['id'] ?>" class="view-btn" style="padding:6px 14px;background:#007bff;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">View</a>
+                                </td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
