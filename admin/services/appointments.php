@@ -1,63 +1,27 @@
-
 <?php
-// PHASE 5 – Appointment acceptance logic
-// Handle acceptance POST (backend logic)
-$acceptSuccess = false;
-$acceptError = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accept_action']) && $_POST['accept_action'] === 'accept_selected') {
-    $selectedIds = isset($_POST['selected_ids']) && is_array($_POST['selected_ids']) ? array_filter(array_map('intval', $_POST['selected_ids'])) : [];
-    $fromTime = $_POST['fromTime'] ?? '';
-    $toTime = $_POST['toTime'] ?? '';
-    $selectedDate = $_POST['selected_date'] ?? '';
-    if (empty($selectedIds)) {
-        $acceptError = 'No appointments selected.';
-    } elseif (!preg_match('/^\d{2}:\d{2}$/', $fromTime) || !preg_match('/^\d{2}:\d{2}$/', $toTime)) {
-        $acceptError = 'Both time fields are required.';
-    } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
-        $acceptError = 'Invalid date.';
-    } else {
-        try {
-            $pdo->beginTransaction();
-            $inClause = implode(',', array_fill(0, count($selectedIds), '?'));
-            $params = $selectedIds;
-            $params[] = $selectedDate;
-            $params[] = $fromTime;
-            $params[] = $toTime;
-            $now = date('Y-m-d H:i:s');
-            $params[] = $now;
-            $updateSql = "UPDATE appointments SET status = 'accepted', assigned_date = ?, assigned_from_time = ?, assigned_to_time = ?, accepted_at = ? WHERE id IN ($inClause) AND payment_status = 'paid' AND status = 'pending'";
-            $updateParams = array_merge([$selectedDate, $fromTime, $toTime, $now], $selectedIds);
-            $stmt = $pdo->prepare($updateSql);
-            if (!$stmt->execute($updateParams)) {
-                throw new Exception('Database update failed.');
-            }
-            if ($stmt->rowCount() !== count($selectedIds)) {
-                throw new Exception('Some appointments could not be updated (may have changed status).');
-            }
-            $pdo->commit();
-            $acceptSuccess = true;
-        } catch (Throwable $e) {
-            $pdo->rollBack();
-            $acceptError = 'Error: ' . $e->getMessage();
-        }
-    }
-}
-// Appointment Management Admin Page (read-only, no AJAX, no writes)
-require_once __DIR__ . '/../../header.php';
-require_once __DIR__ . '/../sidebar.php';
-require_once __DIR__ . '/../../config/db.php';
+// PHASE 1 – Layout & assets only
+// Data logic will be added in later phases
 
-// Fetch all pending paid appointment dates (for date picker)
-$dateStmt = $pdo->prepare("SELECT DISTINCT preferred_date FROM appointments WHERE payment_status = 'paid' AND status = 'pending' ORDER BY preferred_date ASC");
-$dateStmt->execute();
-$dates = $dateStmt->fetchAll(PDO::FETCH_COLUMN);
+// Mandatory includes
+include '../../header.php';
+include '../sidebar.php';
 
-// Determine selected date: GET param or oldest pending date
-$selectedDate = '';
-if (isset($_GET['date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['date'])) {
-    $selectedDate = $_GET['date'];
-} elseif (!empty($dates)) {
-    $selectedDate = $dates[0];
+?>
+<link rel="stylesheet" href="/assets/css/style.css">
+<!-- Add any other CSS includes from index.php here if present -->
+
+<div class="main-content">
+    <h1>Appointment Management</h1>
+    <div style="font-size:1.08em;color:#666;margin-bottom:18px;">Manage paid appointment bookings</div>
+    <!-- PHASE 1 – UI Skeleton with shared admin CSS & JS -->
+    <div id="appointmentContainer">Loading appointments...</div>
+</div>
+
+<!-- Copy/reuse all JS includes from admin/services/index.php -->
+<script src="/assets/js/language.js"></script>
+<!-- Add any other JS includes from index.php here if present -->
+
+<?php include '../../footer.php'; ?>
 }
 
 // Fetch appointments for selected date (if any date is selected)
