@@ -1,3 +1,24 @@
+// STEP 3.2 – Auto select oldest pending appointment date
+// If a valid date is provided in the query string and exists in $pendingDates, use it.
+// Otherwise, default to the oldest pending date. If none, set to null.
+if (isset($_GET['date']) && isset($pendingDates[$_GET['date']])) {
+    $selectedDate = $_GET['date'];
+} elseif (!empty($pendingDates)) {
+    // Fallback: select the oldest pending date (first key in sorted array)
+    $selectedDate = array_key_first($pendingDates);
+} else {
+    // No pending dates available
+    $selectedDate = null;
+}
+// STEP 3.1 – Fetch pending appointment dates (no UI changes yet)
+// This block fetches all dates that have PENDING appointments (service_status = 'Received')
+// and stores them as an associative array: [ 'YYYY-MM-DD' => count ]
+$pendingDates = [];
+$stmtPendingDates = $pdo->prepare("SELECT DATE(created_at) AS appointment_date, COUNT(*) AS total FROM service_requests WHERE category_slug = 'appointment' AND payment_status = 'Paid' AND service_status = 'Received' GROUP BY DATE(created_at) ORDER BY appointment_date ASC");
+$stmtPendingDates->execute();
+foreach ($stmtPendingDates->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    $pendingDates[$row['appointment_date']] = (int)$row['total'];
+}
 <?php
 
 require_once __DIR__ . '/../../config/db.php';
@@ -31,11 +52,16 @@ $completedAppointments = (int)$stmtCompleted->fetchColumn();
 
 // PHASE 2 – Appointment listing from service_requests (category_slug=appointment)
 
-// Fetch appointment bookings from service_requests table
+// Fetch appointment bookings from service_requests table, filtered by selected date if set
 $sql = "
     SELECT id, tracking_id, customer_name, mobile, email, payment_status, service_status, created_at
     FROM service_requests
     WHERE category_slug = 'appointment' AND payment_status = 'Paid'";
+
+// Filter by selected date if available
+if ($selectedDate !== null) {
+    $sql .= " AND DATE(created_at) = :selectedDate";
+}
 
 // Optional: Add service_status filter if it exists
 if (isset($selectedStatus) && in_array($selectedStatus, ['Received', 'Pending'])) {
@@ -45,8 +71,39 @@ if (isset($selectedStatus) && in_array($selectedStatus, ['Received', 'Pending'])
 $sql .= " ORDER BY created_at ASC";
 
 $stmt = $pdo->prepare($sql);
+if ($selectedDate !== null) {
+    $stmt->bindValue(':selectedDate', $selectedDate);
+}
 $stmt->execute();
 $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// STEP 3.6 – Auto fallback if selected date has no appointments
+// If no appointments for selected date and there are still pending dates, fallback to next oldest date (one time only)
+if (empty($appointments) && $selectedDate !== null && !empty($pendingDates)) {
+    // Find the next oldest date after the current $selectedDate
+    $dates = array_keys($pendingDates);
+    $currentIndex = array_search($selectedDate, $dates);
+    // Defensive: if not found or last date, fallback to first date
+    if ($currentIndex === false || $currentIndex + 1 >= count($dates)) {
+        $fallbackDate = $dates[0];
+    } else {
+        $fallbackDate = $dates[$currentIndex + 1];
+    }
+    // Only fallback if it's a different date
+    if ($fallbackDate !== $selectedDate) {
+        $selectedDate = $fallbackDate;
+        // Re-run the query for the new date
+        $sql = "
+            SELECT id, tracking_id, customer_name, mobile, email, payment_status, service_status, created_at
+            FROM service_requests
+            WHERE category_slug = 'appointment' AND payment_status = 'Paid' AND DATE(created_at) = :selectedDate
+            ORDER BY created_at ASC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':selectedDate', $selectedDate);
+        $stmt->execute();
+        $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -224,50 +281,75 @@ h1 {
         <div class="summary-label">Total Appointments</div>
     </div>
 </div>
-<form class="filter-bar" method="get">
-    <label>Date</label>
-    <input type="date" name="date" value="<?= htmlspecialchars($_GET['date'] ?? '') ?>" />
-    <button type="submit">Apply</button>
-</form>
-<div id="appointmentContainer">
-    <table class="service-table">
-        <thead>
-            <tr>
-                <th><input type="checkbox" id="selectAll" /></th>
-                <th>Tracking ID</th>
-                <th>Customer Name</th>
-                <th>Mobile</th>
-                <th>Email</th>
-                <th>Payment Status</th>
-                <th>Service Status</th>
-                <th>Created Date</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if (empty($appointments)): ?>
+<?php if (empty($pendingDates)): ?>
+    <div style="margin: 32px 0; text-align: center; font-size: 1.2em; color: #800000; font-weight: 600;">No pending appointments.</div>
+<?php else: ?>
+    <!-- STEP 3.3 – Calendar UI for pending appointments (no filtering yet) -->
+    <div class="filter-bar" style="margin-bottom: 10px;">
+        <label for="calendar-date">Pending Date</label>
+        <input type="date" id="calendar-date" value="<?= htmlspecialchars($selectedDate ?? '') ?>" />
+    </div>
+    <?php if ($selectedDate): ?>
+        <div style="margin-bottom: 18px; font-weight: 600; color: #800000;">
+            Total appointments on this date: <?= $pendingDates[$selectedDate] ?? 0 ?>
+        </div>
+    <?php endif; ?>
+    <div id="appointmentContainer">
+        <table class="service-table">
+            <thead>
                 <tr>
-                    <td colspan="8" class="no-data">No appointment bookings found.</td>
+                    <th><input type="checkbox" id="selectAll" /></th>
+                    <th>Tracking ID</th>
+                    <th>Customer Name</th>
+                    <th>Mobile</th>
+                    <th>Email</th>
+                    <th>Payment Status</th>
+                    <th>Service Status</th>
+                    <th>Created Date</th>
                 </tr>
-            <?php else: ?>
-                <?php foreach ($appointments as $appointment): ?>
+            </thead>
+            <tbody>
+                <?php if (empty($appointments)): ?>
                     <tr>
-                        <td><input type="checkbox" value="<?= $appointment['id'] ?>" /></td>
-                        <td><?= htmlspecialchars($appointment['tracking_id']) ?></td>
-                        <td><?= htmlspecialchars($appointment['customer_name']) ?></td>
-                        <td><?= htmlspecialchars($appointment['mobile']) ?></td>
-                        <td><?= htmlspecialchars($appointment['email']) ?></td>
-                        <td class="status-<?= strtolower($appointment['payment_status']) ?>"><?= htmlspecialchars($appointment['payment_status']) ?></td>
-                        <td class="status-<?= strtolower($appointment['service_status']) ?>"><?= htmlspecialchars($appointment['service_status']) ?></td>
-                        <td><?= htmlspecialchars($appointment['created_at']) ?></td>
+                        <td colspan="8" class="no-data">No appointment bookings found.</td>
                     </tr>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </tbody>
-    </table>
-</div>
-<div id="pagination" class="pagination"></div>
+                <?php else: ?>
+                    <?php foreach ($appointments as $appointment): ?>
+                        <tr>
+                            <td><input type="checkbox" value="<?= $appointment['id'] ?>" /></td>
+                            <td><?= htmlspecialchars($appointment['tracking_id']) ?></td>
+                            <td><?= htmlspecialchars($appointment['customer_name']) ?></td>
+                            <td><?= htmlspecialchars($appointment['mobile']) ?></td>
+                            <td><?= htmlspecialchars($appointment['email']) ?></td>
+                            <td class="status-<?= strtolower($appointment['payment_status']) ?>"><?= htmlspecialchars($appointment['payment_status']) ?></td>
+                            <td class="status-<?= strtolower($appointment['service_status']) ?>"><?= htmlspecialchars($appointment['service_status']) ?></td>
+                            <td><?= htmlspecialchars($appointment['created_at']) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <div id="pagination" class="pagination"></div>
+<?php endif; ?>
 </div>
 <script>
+// Allowed dates for pending appointments (from PHP)
+const allowedDates = <?= json_encode(array_keys($pendingDates)) ?>;
+const selectedDate = <?= json_encode($selectedDate) ?>;
+
+// Calendar validation logic
+const calendarInput = document.getElementById('calendar-date');
+let lastValidDate = selectedDate;
+calendarInput.addEventListener('change', function() {
+    if (!allowedDates.includes(calendarInput.value)) {
+        alert('No appointments on selected date');
+        calendarInput.value = lastValidDate;
+    } else {
+        lastValidDate = calendarInput.value;
+    }
+});
+
 // Select/Deselect all checkboxes
 const selectAllCheckbox = document.getElementById('selectAll');
 selectAllCheckbox.addEventListener('change', function() {
