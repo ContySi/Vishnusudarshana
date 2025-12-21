@@ -1,3 +1,10 @@
+
+<?php
+
+require_once __DIR__ . '/../../config/db.php';
+
+// PHASE 2.1 – Dynamic appointment statistics from service_requests
+
 // STEP 3.2 – Auto select oldest pending appointment date
 // If a valid date is provided in the query string and exists in $pendingDates, use it.
 // Otherwise, default to the oldest pending date. If none, set to null.
@@ -19,11 +26,6 @@ $stmtPendingDates->execute();
 foreach ($stmtPendingDates->fetchAll(PDO::FETCH_ASSOC) as $row) {
     $pendingDates[$row['appointment_date']] = (int)$row['total'];
 }
-<?php
-
-require_once __DIR__ . '/../../config/db.php';
-
-// PHASE 2.1 – Dynamic appointment statistics from service_requests
 
 // Total Appointments
 $stmtTotal = $pdo->prepare("SELECT COUNT(*) FROM service_requests WHERE category_slug = 'appointment' AND payment_status = 'Paid'");
