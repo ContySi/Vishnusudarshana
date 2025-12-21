@@ -28,53 +28,81 @@ h1 {
     margin-bottom: 24px;
     flex-wrap: wrap;
 }
-.summary-card {
-    flex: 1 1 180px;
-    background: #fffbe7;
-    border-radius: 14px;
-    padding: 16px;
-    text-align: center;
-    box-shadow: 0 2px 8px #e0bebe22;
-}
-.summary-count {
-    font-size: 2.2em;
-    font-weight: 700;
-    color: #800000;
-}
-.summary-label {
-    font-size: 1em;
-    color: #444;
-}
-.filter-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 18px;
-}
-.filter-bar label {
-    font-weight: 600;
-}
-.filter-bar select,
-.filter-bar button {
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 1em;
-}
-.filter-bar button {
-    background: #800000;
-    color: #fff;
-    border: none;
-    cursor: pointer;
-}
-.service-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #fff;
-    box-shadow: 0 2px 12px #e0bebe22;
-    border-radius: 12px;
-    overflow: hidden;
-}
-.service-table th,
+
+<!-- PHASE 2 – Appointment listing from service_requests (category_slug=appointment) -->
+
+<div class="summary-cards">
+    <div class="summary-card">
+        <div class="summary-count">0</div>
+        <div class="summary-label">Today’s Appointments</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-count">0</div>
+        <div class="summary-label">Pending</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-count">0</div>
+        <div class="summary-label">Accepted</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-count">0</div>
+        <div class="summary-label">Completed</div>
+    </div>
+</div>
+
+<div id="appointmentContainer">
+    <table class="service-table">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="selectAll"></th>
+                <th>Tracking ID</th>
+                <th>Customer Name</th>
+                <th>Mobile</th>
+                <th>Email</th>
+                <th>Payment Status</th>
+                <th>Service Status</th>
+                <th>Created Date</th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php
+        // PHASE 2 – Appointment listing from service_requests (category_slug=appointment)
+        $query = "SELECT id, tracking_id, customer_name, mobile, email, payment_status, service_status, created_at FROM service_requests WHERE category_slug = 'appointment' AND payment_status = 'Paid' ORDER BY created_at ASC";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (!$rows): ?>
+            <tr><td colspan="8" class="no-data">No appointment bookings found.</td></tr>
+        <?php else:
+            foreach ($rows as $row): ?>
+            <tr>
+                <td><input type="checkbox" class="row-checkbox" value="<?= htmlspecialchars($row['id']) ?>"></td>
+                <td><?= htmlspecialchars($row['tracking_id']) ?></td>
+                <td><?= htmlspecialchars($row['customer_name']) ?></td>
+                <td><?= htmlspecialchars($row['mobile']) ?></td>
+                <td><?= htmlspecialchars($row['email']) ?></td>
+                <td><span class="status-badge payment-<?= strtolower(str_replace(' ', '-', $row['payment_status'])) ?>"><?= htmlspecialchars($row['payment_status']) ?></span></td>
+                <td><span class="status-badge status-<?= strtolower(str_replace(' ', '-', $row['service_status'])) ?>"><?= htmlspecialchars($row['service_status']) ?></span></td>
+                <td><?= date('d-m-Y H:i', strtotime($row['created_at'])) ?></td>
+            </tr>
+        <?php endforeach;
+        endif; ?>
+        </tbody>
+    </table>
+</div>
+
+<script>
+// PHASE 2 – Select all feature
+document.addEventListener('DOMContentLoaded', function () {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            checkboxes.forEach(cb => { cb.checked = selectAll.checked; });
+        });
+    }
+});
+</script>
 .service-table td {
     padding: 12px 10px;
     border-bottom: 1px solid #f3caca;
@@ -154,52 +182,51 @@ h1 {
 </head>
 <body>
 <div class="admin-container">
-    <h1>Appointment Management</h1>
-    <!-- PHASE 2 – Read-only appointment listing from appointments table -->
-    <div id="appointmentContainer">
-        <?php
-        // PHASE 2 – Read-only appointment listing from appointments table
-        $stmt = $pdo->prepare("SELECT id, customer_name, mobile, appointment_type, preferred_date, preferred_time_slot, notes, payment_status, created_at FROM appointments WHERE payment_status = 'paid' AND status = 'pending' ORDER BY preferred_date ASC, preferred_time_slot ASC, created_at ASC");
-        $stmt->execute();
-        $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        ?>
-        <table class="service-table">
-            <thead>
-                <tr>
-                    <th><input type="checkbox" id="selectAll"></th>
-                    <th>Appointment ID</th>
-                    <th>Customer Name</th>
-                    <th>Mobile Number</th>
-                    <th>Appointment Type</th>
-                    <th>Preferred Date</th>
-                    <th>Preferred Time Slot</th>
-                    <th>Notes</th>
-                    <th>Payment Status</th>
-                    <th>Created At</th>
-                </tr>
-            </thead>
-            <tbody>
-            <?php if (empty($appointments)): ?>
-                <tr><td colspan="10" class="no-data">No pending paid appointments found.</td></tr>
-            <?php else: ?>
-                <?php foreach ($appointments as $a): ?>
-                <tr>
-                    <td><input type="checkbox" class="row-checkbox" value="<?= htmlspecialchars($a['id']) ?>"></td>
-                    <td><?= htmlspecialchars($a['id']) ?></td>
-                    <td><?= htmlspecialchars($a['customer_name']) ?></td>
-                    <td><?= htmlspecialchars($a['mobile']) ?></td>
-                    <td><?= htmlspecialchars($a['appointment_type']) ?></td>
-                    <td><?= htmlspecialchars($a['preferred_date']) ?></td>
-                    <td><?= htmlspecialchars($a['preferred_time_slot']) ?></td>
-                    <td><?= htmlspecialchars($a['notes']) ?></td>
-                    <td><span class="status-badge payment-<?= strtolower(htmlspecialchars($a['payment_status'])) ?>"><?= htmlspecialchars(ucfirst($a['payment_status'])) ?></span></td>
-                    <td><?= date('d-m-Y H:i', strtotime($a['created_at'])) ?></td>
-                </tr>
-                <?php endforeach; ?>
-            <?php endif; ?>
-            </tbody>
-        </table>
+<h1>Appointment Management</h1>
+<div class="summary-cards">
+    <div class="summary-card">
+        <div class="summary-count">0</div>
+        <div class="summary-label">Today’s Appointments</div>
     </div>
+    <div class="summary-card">
+        <div class="summary-count">0</div>
+        <div class="summary-label">Pending</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-count">0</div>
+        <div class="summary-label">Accepted</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-count">0</div>
+        <div class="summary-label">Completed</div>
+    </div>
+</div>
+<form class="filter-bar" method="get">
+    <label>Date</label>
+    <input type="date" name="date" value="<?= htmlspecialchars($_GET['date'] ?? '') ?>" />
+    <button type="submit">Apply</button>
+</form>
+<table class="service-table">
+<thead>
+<tr>
+    <th>ID</th>
+    <th>Customer</th>
+    <th>Mobile</th>
+    <th>Type</th>
+    <th>Date</th>
+    <th>Time Slot</th>
+    <th>Status</th>
+    <th>Created</th>
+    <th>Action</th>
+</tr>
+</thead>
+<tbody id="serviceTableBody">
+    <tr>
+        <td colspan="9" class="no-data">No appointments found.</td>
+    </tr>
+</tbody>
+</table>
+<div id="pagination" class="pagination"></div>
 </div>
 </body>
 </html>
