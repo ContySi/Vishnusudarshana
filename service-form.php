@@ -81,7 +81,7 @@ unset($fields);
 <main class="main-content">
     <h1 class="form-title"><?php echo htmlspecialchars($categories[$category]); ?> — Service Form</h1>
     <?php if ($category === 'appointment'): ?>
-    <form method="post" action="service-review.php?category=<?php echo urlencode($category); ?>" class="service-form" autocomplete="off">
+    <form method="post" action="service-review.php?category=<?php echo urlencode($category); ?>" class="service-form" autocomplete="off" id="appointmentForm">
         <section class="form-section">
             <h2 class="form-section-title">Appointment Details</h2>
             <div class="form-group">
@@ -106,7 +106,7 @@ unset($fields);
             </div>
             <div class="form-group">
                 <label>Preferred Date <span class="req">*</span></label>
-                <input type="date" name="preferred_date" required>
+                <input type="date" name="preferred_date" id="preferred_date_input" required autocomplete="off">
             </div>
             <div class="form-group">
                 <label>Preferred Time Window <span class="req">*</span></label>
@@ -119,6 +119,44 @@ unset($fields);
         </section>
         <button type="submit" class="form-submit-btn">Continue</button>
     </form>
+    <script>
+    // Set min date to today in IST and prevent past date selection
+    document.addEventListener('DOMContentLoaded', function() {
+        var dateInput = document.getElementById('preferred_date_input');
+        if (dateInput) {
+            function getISTToday() {
+                var now = new Date();
+                var utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+                var istOffset = 5.5 * 60 * 60 * 1000;
+                var istNow = new Date(utc + istOffset);
+                var yyyy = istNow.getFullYear();
+                var mm = String(istNow.getMonth() + 1).padStart(2, '0');
+                var dd = String(istNow.getDate()).padStart(2, '0');
+                return yyyy + '-' + mm + '-' + dd;
+            }
+            var todayStr = getISTToday();
+            dateInput.setAttribute('min', todayStr);
+            dateInput.addEventListener('input', function() {
+                if (dateInput.value < todayStr) {
+                    dateInput.value = todayStr;
+                }
+            });
+            // Prevent manual bypass on submit
+            var form = document.getElementById('appointmentForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    if (dateInput.value < todayStr) {
+                        alert('Please select today or a future date.');
+                        dateInput.value = todayStr;
+                        dateInput.focus();
+                        e.preventDefault();
+                        return false;
+                    }
+                });
+            }
+        }
+    });
+    </script>
     <?php else: ?>
     <form method="post" action="service-review.php?category=<?php echo urlencode($category); ?>" class="service-form" autocomplete="off">
         <section class="form-section">

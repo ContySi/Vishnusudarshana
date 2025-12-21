@@ -31,11 +31,13 @@ if ($category === 'appointment') {
     if (!in_array($form_data['appointment_type'] ?? '', $valid_types, true)) {
         $errors[] = 'Invalid appointment type.';
     }
-    // Validate date
-    $today = date('Y-m-d');
-    $maxDate = date('Y-m-d', strtotime('+30 days'));
+    // Validate date (IST)
+    $nowUtc = new DateTime('now', new DateTimeZone('UTC'));
+    $nowUtc->setTimezone(new DateTimeZone('Asia/Kolkata'));
+    $todayIST = $nowUtc->format('Y-m-d');
+    $maxDate = date('Y-m-d', strtotime('+30 days', strtotime($todayIST)));
     $date = $form_data['preferred_date'] ?? '';
-    if ($date < $today || $date > $maxDate) {
+    if ($date < $todayIST || $date > $maxDate) {
         $errors[] = 'Invalid preferred date.';
     }
     // Validate product selection (on POST)
