@@ -308,6 +308,11 @@ if ($paymentSource === 'appointment') {
     exit('Error: Appointment flow breach detected');
 }
 
+/* ======================
+   STEP 3: NORMAL SERVICE FLOW (only if NOT appointment)
+   ====================== */
+if ($paymentSource !== 'appointment') {
+
 // Create service tables if not exist
 $pdo->exec("CREATE TABLE IF NOT EXISTS service_requests (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -347,6 +352,12 @@ $city         = $pending['customer_details']['city'] ?? '';
 $formData     = $pending['form_data'] ?? [];
 $products     = $pending['products'] ?? [];
 $totalAmount  = $pending['total_amount'] ?? 0;
+
+// DEFENSIVE GUARD: Block any appointment payments from reaching service insert
+if ($paymentSource === 'appointment') {
+    error_log('CRITICAL: Blocked service insert for appointment payment_id=' . $payment_id);
+    exit('Error: Appointment cannot insert service request');
+}
 
 // Insert service request (log errors but continue - data is still in pending_payments table)
 try {
@@ -425,3 +436,4 @@ try {
     error_log('Failed to delete pending_payments record for payment_id=' . $payment_id . '. Error: ' . $e->getMessage());
 }
 
+} // END if ($paymentSource !== 'appointment')
