@@ -1,3 +1,9 @@
+
+<?php
+// admin/services/appointmentmanagement.php
+
+require_once __DIR__ . '/../../config/db.php';
+
 // SAFEGUARD: All appointment status updates must operate ONLY on appointments table.
 // Never update, insert, or delete from service_requests in this file.
 
@@ -28,10 +34,6 @@ if (isset($_POST['appointment_id']) && isset($_POST['action'])) {
     }
     // Never touch service_requests here
 }
-<?php
-// admin/services/appointmentmanagement.php
-
-require_once __DIR__ . '/../../config/db.php';
 
 /**
  * ==========================
