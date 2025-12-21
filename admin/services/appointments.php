@@ -10,6 +10,65 @@
 require_once __DIR__ . '/../../config/db.php';
 
 /* ============================================================
+   HANDLE ACCEPT & RESCHEDULE ACTIONS
+   ============================================================ */
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['action'])) {
+        $action = $_POST['action'];
+        $appointmentIds = $_POST['appointment_ids'] ?? [];
+        
+        if ($action === 'accept' && !empty($appointmentIds)) {
+            $assignedDate = $_POST['assigned_date'] ?? '';
+            $timeFrom = $_POST['time_from'] ?? '';
+            $timeTo = $_POST['time_to'] ?? '';
+            
+            // Validation
+            if ($assignedDate && $timeFrom && $timeTo && $timeFrom < $timeTo) {
+                $stmt = $pdo->prepare("
+                    UPDATE service_requests 
+                    SET service_status = 'Accepted',
+                        form_data = JSON_SET(
+                            form_data,
+                            '$.assigned_date', ?,
+                            '$.assigned_from_time', ?,
+                            '$.assigned_to_time', ?
+                        ),
+                        updated_at = NOW()
+                    WHERE id IN (" . implode(',', array_fill(0, count($appointmentIds), '?')) . ")
+                      AND category_slug = 'appointment'
+                      AND service_status = 'Received'
+                ");
+                $params = array_merge([$assignedDate, $timeFrom, $timeTo], $appointmentIds);
+                $stmt->execute($params);
+                
+                header('Location: appointments.php?success=accepted');
+                exit;
+            }
+        } elseif ($action === 'reschedule' && !empty($appointmentIds)) {
+            $newDate = $_POST['new_date'] ?? '';
+            
+            // Validation: new date must be today or future
+            if ($newDate && $newDate >= date('Y-m-d')) {
+                $stmt = $pdo->prepare("
+                    UPDATE service_requests 
+                    SET form_data = JSON_SET(form_data, '$.preferred_date', ?),
+                        service_status = 'Received',
+                        updated_at = NOW()
+                    WHERE id IN (" . implode(',', array_fill(0, count($appointmentIds), '?')) . ")
+                      AND category_slug = 'appointment'
+                ");
+                $params = array_merge([$newDate], $appointmentIds);
+                $stmt->execute($params);
+                
+                header('Location: appointments.php?success=rescheduled');
+                exit;
+            }
+        }
+    }
+}
+
+/* ============================================================
    PHASE 2.1 – DYNAMIC APPOINTMENT STATISTICS
    ============================================================ */
 
@@ -238,10 +297,152 @@ h1 {
 }
 .status-received { background: #e5f0ff; color: #0056b3; }
 .payment-paid { background: #e5ffe5; color: #1a8917; }
+.badge-overdue {
+    background: #ff4444;
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 600;
+    margin-left: 6px;
+}
 .no-data {
     text-align: center;
     color: #777;
     padding: 24px;
+}
+/* Action Bar */
+.action-bar {
+    display: none;
+    background: #fff3cd;
+    border: 2px solid #ffc107;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    align-items: center;
+    gap: 12px;
+}
+.action-bar.show {
+    display: flex;
+}
+.action-bar-label {
+    font-weight: 600;
+    color: #856404;
+    margin-right: auto;
+}
+.action-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95em;
+}
+.btn-accept {
+    background: #28a745;
+    color: #fff;
+}
+.btn-reschedule {
+    background: #ffc107;
+    color: #333;
+}
+.btn-accept:hover {
+    background: #218838;
+}
+.btn-reschedule:hover {
+    background: #e0a800;
+}
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+}
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.modal-content {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.modal-header h2 {
+    color: #800000;
+    margin: 0;
+}
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: #999;
+}
+.form-group {
+    margin-bottom: 16px;
+}
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #333;
+}
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1em;
+}
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+.modal-footer {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+.btn-cancel {
+    padding: 8px 16px;
+    background: #6c757d;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+.btn-submit {
+    padding: 8px 16px;
+    background: #800000;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+.btn-cancel:hover {
+    background: #5a6268;
+}
+.btn-submit:hover {
+    background: #600000;
 }
 /* PHASE 4 – Dropdown Styling */
 #appointmentDateSelect {
@@ -336,6 +537,14 @@ if (isset($pendingDates[$todayDate])) {
 <div style="margin-bottom:18px;font-weight:600;color:#800000;">
     Total appointments on this date: <?= $pendingDates[$selectedDate] ?? 0 ?>
 </div>
+
+<!-- PHASE 2 – ACTION BAR -->
+<div class="action-bar" id="actionBar">
+    <span class="action-bar-label"><span id="selectedCount">0</span> appointment(s) selected</span>
+    <button class="action-btn btn-accept" onclick="openAcceptModal()">Accept Appointment</button>
+    <button class="action-btn btn-reschedule" onclick="openRescheduleModal()">Reschedule Appointment</button>
+</div>
+
 <?php else: ?>
 <div class="no-data" style="font-size:1.2em;color:#800000;font-weight:600;">
     No pending appointments available
@@ -373,16 +582,27 @@ if (isset($pendingDates[$todayDate])) {
                     } else {
                         $displayDate = '—';
                     }
+                    
+                    // PHASE 1 – Identify old/past appointments
+                    $isOverdue = false;
+                    if ($preferredDate && $preferredDate < date('Y-m-d')) {
+                        $isOverdue = true;
+                    }
                 ?>
                 <tr>
                     <td>
-                        <input type="checkbox" class="rowCheckbox" value="<?= (int)$a['id'] ?>">
+                        <input type="checkbox" class="rowCheckbox" value="<?= (int)$a['id'] ?>" data-date="<?= htmlspecialchars($preferredDate) ?>">
                     </td>
                     <td><?= htmlspecialchars($a['tracking_id']) ?></td>
                     <td><?= htmlspecialchars($a['customer_name']) ?></td>
                     <td><?= htmlspecialchars($a['mobile']) ?></td>
                     <td><?= htmlspecialchars($a['email']) ?></td>
-                    <td style="font-weight:600;color:#800000;"><?= htmlspecialchars($displayDate) ?></td>
+                    <td style="font-weight:600;color:#800000;">
+                        <?= htmlspecialchars($displayDate) ?>
+                        <?php if ($isOverdue): ?>
+                            <span class="badge-overdue">Past Date</span>
+                        <?php endif; ?>
+                    </td>
                     <td><span class="status-badge payment-paid">Paid</span></td>
                     <td><span class="status-badge status-received">Pending</span></td>
                     <td><?= htmlspecialchars($a['created_at']) ?></td>
@@ -396,7 +616,191 @@ if (isset($pendingDates[$todayDate])) {
 
 </div>
 
+<!-- PHASE 3 – ACCEPT APPOINTMENT MODAL -->
+<div class="modal" id="acceptModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Accept Appointment</h2>
+            <button class="modal-close" onclick="closeAcceptModal()">&times;</button>
+        </div>
+        <form method="POST" onsubmit="return validateAcceptForm()">
+            <input type="hidden" name="action" value="accept">
+            <input type="hidden" name="appointment_ids[]" id="acceptAppointmentIds">
+            
+            <div class="form-group">
+                <label for="assignedDate">Assigned Date *</label>
+                <input type="date" id="assignedDate" name="assigned_date" required min="<?= date('Y-m-d') ?>">
+            </div>
+            
+            <div class="form-group">
+                <label for="timeFrom">Time From *</label>
+                <input type="time" id="timeFrom" name="time_from" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="timeTo">Time To *</label>
+                <input type="time" id="timeTo" name="time_to" required>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeAcceptModal()">Cancel</button>
+                <button type="submit" class="btn-submit">Accept Appointment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- PHASE 4 – RESCHEDULE APPOINTMENT MODAL -->
+<div class="modal" id="rescheduleModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Reschedule Appointment</h2>
+            <button class="modal-close" onclick="closeRescheduleModal()">&times;</button>
+        </div>
+        <form method="POST" onsubmit="return validateRescheduleForm()">
+            <input type="hidden" name="action" value="reschedule">
+            <input type="hidden" name="appointment_ids[]" id="rescheduleAppointmentIds">
+            
+            <div class="form-group">
+                <label for="currentDate">Current Preferred Date</label>
+                <input type="text" id="currentDate" readonly style="background:#f5f5f5;">
+            </div>
+            
+            <div class="form-group">
+                <label for="newDate">New Appointment Date *</label>
+                <input type="date" id="newDate" name="new_date" required min="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d', strtotime('+30 days')) ?>">
+            </div>
+            
+            <div class="form-group">
+                <label for="rescheduleNote">Reason (Optional)</label>
+                <textarea id="rescheduleNote" name="note" placeholder="e.g., Customer requested date change"></textarea>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeRescheduleModal()">Cancel</button>
+                <button type="submit" class="btn-submit">Reschedule Appointment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
+// Track selected appointments
+let selectedAppointments = [];
+
+// Update action bar visibility and selection counter
+function updateActionBar() {
+    const checkboxes = document.querySelectorAll('.rowCheckbox:checked');
+    selectedAppointments = Array.from(checkboxes).map(cb => ({
+        id: cb.value,
+        date: cb.getAttribute('data-date')
+    }));
+    
+    const count = selectedAppointments.length;
+    document.getElementById('selectedCount').textContent = count;
+    document.getElementById('actionBar').classList.toggle('show', count > 0);
+}
+
+// PHASE 3 – Accept Appointment Functions
+function openAcceptModal() {
+    if (selectedAppointments.length === 0) return;
+    
+    // Set appointment IDs
+    const ids = selectedAppointments.map(a => a.id);
+    document.getElementById('acceptAppointmentIds').value = ids.join(',');
+    
+    // Set default assigned date to first selected appointment's preferred date
+    const firstDate = selectedAppointments[0].date;
+    if (firstDate && firstDate >= '<?= date('Y-m-d') ?>') {
+        document.getElementById('assignedDate').value = firstDate;
+    } else {
+        document.getElementById('assignedDate').value = '<?= date('Y-m-d') ?>';
+    }
+    
+    document.getElementById('acceptModal').classList.add('show');
+}
+
+function closeAcceptModal() {
+    document.getElementById('acceptModal').classList.remove('show');
+}
+
+function validateAcceptForm() {
+    const timeFrom = document.getElementById('timeFrom').value;
+    const timeTo = document.getElementById('timeTo').value;
+    
+    if (timeFrom >= timeTo) {
+        alert('Time From must be before Time To');
+        return false;
+    }
+    
+    if (!confirm(`Accept ${selectedAppointments.length} appointment(s)?`)) {
+        return false;
+    }
+    
+    // Convert single hidden input to multiple
+    const form = event.target;
+    form.querySelector('#acceptAppointmentIds').remove();
+    selectedAppointments.forEach(a => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'appointment_ids[]';
+        input.value = a.id;
+        form.appendChild(input);
+    });
+    
+    return true;
+}
+
+// PHASE 4 – Reschedule Appointment Functions
+function openRescheduleModal() {
+    if (selectedAppointments.length === 0) return;
+    
+    // Set appointment IDs
+    const ids = selectedAppointments.map(a => a.id);
+    document.getElementById('rescheduleAppointmentIds').value = ids.join(',');
+    
+    // Show current preferred date
+    const currentDate = selectedAppointments[0].date;
+    const dateObj = new Date(currentDate);
+    document.getElementById('currentDate').value = dateObj.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    });
+    
+    document.getElementById('rescheduleModal').classList.add('show');
+}
+
+function closeRescheduleModal() {
+    document.getElementById('rescheduleModal').classList.remove('show');
+}
+
+function validateRescheduleForm() {
+    const newDate = document.getElementById('newDate').value;
+    
+    if (newDate < '<?= date('Y-m-d') ?>') {
+        alert('New date cannot be in the past');
+        return false;
+    }
+    
+    if (!confirm(`Reschedule ${selectedAppointments.length} appointment(s) to ${newDate}?`)) {
+        return false;
+    }
+    
+    // Convert single hidden input to multiple
+    const form = event.target;
+    form.querySelector('#rescheduleAppointmentIds').remove();
+    selectedAppointments.forEach(a => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'appointment_ids[]';
+        input.value = a.id;
+        form.appendChild(input);
+    });
+    
+    return true;
+}
+
 // Select/Deselect all checkboxes
 const selectAll = document.getElementById('selectAll');
 if (selectAll) {
@@ -404,8 +808,14 @@ if (selectAll) {
         document.querySelectorAll('.rowCheckbox').forEach(cb => {
             cb.checked = selectAll.checked;
         });
+        updateActionBar();
     });
 }
+
+// Listen to individual checkbox changes
+document.querySelectorAll('.rowCheckbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateActionBar);
+});
 </script>
 
 </body>
