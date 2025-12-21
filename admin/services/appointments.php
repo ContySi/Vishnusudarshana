@@ -2,9 +2,7 @@
 // PHASE 1 – Layout & assets only
 // Data logic will be added in later phases
 
-// Mandatory includes
-include '../../header.php';
-include '../sidebar.php';
+// No header, sidebar, or footer includes (see index.php)
 
 ?>
 <link rel="stylesheet" href="/assets/css/style.css">
@@ -21,7 +19,7 @@ include '../sidebar.php';
 <script src="/assets/js/language.js"></script>
 <!-- Add any other JS includes from index.php here if present -->
 
-<?php include '../../footer.php'; ?>
+<!-- No footer include (see index.php) -->
 }
 
 // Fetch appointments for selected date (if any date is selected)
