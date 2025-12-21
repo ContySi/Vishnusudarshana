@@ -33,6 +33,7 @@ if ($payment_id === '') {
     header('Location: services.php?msg=missing_payment_id');
     exit;
 }
+$source = 'appointment'; // force canonical value
 
 // LOAD FROM DATABASE FIRST (source of truth for all payment types)
 $stmt = $pdo->prepare("SELECT * FROM pending_payments WHERE payment_id = ?");
