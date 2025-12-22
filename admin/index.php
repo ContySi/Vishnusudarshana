@@ -37,6 +37,44 @@ $recentRows = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
     <title>Admin Dashboard</title>
         <link rel="stylesheet" href="/assets/css/style.css">
         <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f7f7fa;
+            margin: 0;
+        }
+        .admin-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 24px 12px;
+        }
+        h1 {
+            color: #800000;
+            margin-bottom: 18px;
+        }
+        /* SUMMARY CARDS */
+        .summary-cards {
+            display: flex;
+            gap: 18px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .summary-card {
+            flex: 1 1 180px;
+            background: #fffbe7;
+            border-radius: 14px;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 2px 8px #e0bebe22;
+        }
+        .summary-count {
+            font-size: 2.2em;
+            font-weight: 700;
+            color: #800000;
+        }
+        .summary-label {
+            font-size: 1em;
+            color: #444;
+        }
         .filter-bar label {
             font-weight: 600;
         }
