@@ -54,6 +54,14 @@ $menu = [
         ]
     ],
 
+    'Reels' => [
+        'icon' => '🎥',
+        'submenu' => [
+            'Manage Reels' => $baseUrl . '/admin/reels/index.php',
+            'Add Reel'     => $baseUrl . '/admin/reels/add.php',
+        ]
+    ],
+
     'Payments' => [
         'icon' => '💳',
         'submenu' => [
