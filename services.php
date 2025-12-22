@@ -4,7 +4,8 @@
     <section class="service-categories">
         <h1 class="services-title">Choose a Service Type</h1>
         <div class="categories-grid">
-            <a class="category-card" href="service-detail.php?service=appointment">
+            <!-- New Book an Appointment Card -->
+            <a class="category-card" href="category.php?category=appointment">
                 <div class="category-icon" aria-label="Book an Appointment">📅</div>
                 <div class="category-info">
                     <h2>Book an Appointment</h2>
@@ -12,15 +13,6 @@
                     <span class="category-badge guidance">Booking</span>
                 </div>
             </a>
-                <!-- New Book an Appointment Card -->
-                <a class="category-card" href="category.php?category=appointment">
-                    <div class="category-icon" aria-label="Book an Appointment">📅</div>
-                    <div class="category-info">
-                        <h2>Book an Appointment</h2>
-                        <p>Schedule an online or offline appointment; final slot confirmed by our team.</p>
-                        <span class="category-badge guidance">Booking</span>
-                    </div>
-                </a>
             <a class="category-card" href="category.php?category=birth-child">
                 <div class="category-icon" aria-label="Birth & Child Services">👶</div>
                 <div class="category-info">

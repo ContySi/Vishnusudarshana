@@ -238,7 +238,6 @@ body {
         <div class="detail-icon-large">
             <?php // Use same icon as services.php for each category
             $icons = [
-                // 'book-appointment' => '📅',
                 'appointment' => '📅',
                 'birth-child' => '👶',
                 'marriage-matching' => '💍',
