@@ -79,7 +79,6 @@ document.addEventListener('DOMContentLoaded', function() {
             <!-- Instagram Embed Placeholder -->
             <iframe 
                 src="https://www.instagram.com/p/Cw0v0Q2Jv1A/embed" 
-                title="Instagram Reel" 
                 <?php
                 require_once __DIR__ . '/config/db.php';
                 $reels = $pdo->query("SELECT * FROM instagram_reels WHERE is_active = 1 ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
