@@ -5,7 +5,7 @@
 // --- BASE_URL dynamic detection (works for /, /1/, /subdir/, etc.) ---
 $scriptName = $_SERVER['SCRIPT_NAME'];
 // Example: /1/admin/services/completed-appointments.php
-$basePath = explode('/1/', $scriptName)[0];
+$basePath = explode('/1nikhil/', $scriptName)[0];
 // Result: /1 (or empty string for root)
 
 $menu = [
