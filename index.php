@@ -198,7 +198,7 @@ function getPanchangValue($key, $default = '—') {
                 <p class="cta-guidance-text">You can book an appointment for a consultation or service. Choose online or in-person, as you prefer. We are here to help with astrology, vastu, or other important matters.</p>
                 <div class="cta-guidance-btns">
                     <a href="services.php" class="cta-guidance-btn">Book Consultation</a>
-                    <a href="service-detail.php?service=appointment" class="cta-guidance-btn secondary">Book Appointment</a>
+                    <a href="category.php?category=appointment" class="cta-guidance-btn secondary">Book Appointment</a>
                 </div>
             </div>
         </section>
