@@ -36,52 +36,53 @@ $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if (count($rows) === 0) {
-    echo '<tr><td colspan="6" class="no-data">No recent activity found.</td></tr>';
+    echo '<tr><td colspan="9" class="no-data">No recent activity found.</td></tr>';
 } else {
-        $catMap = [
-            'birth-child' => 'Birth & Child Services',
-            'marriage-matching' => 'Marriage & Matching',
-            'astrology-consultation' => 'Astrology Consultation',
-            'muhurat-event' => 'Muhurat & Event Guidance',
-            'pooja-vastu-enquiry' => 'Pooja, Ritual & Vastu Enquiry',
-            'appointment' => 'Appointment',
-        ];
-        foreach ($rows as $row) {
-            echo '<tr>';
-            // Tracking ID
-            echo '<td>' . htmlspecialchars($row['tracking_id']) . '</td>';
-            // Customer Name
-            echo '<td>' . htmlspecialchars($row['customer_name']) . '</td>';
-            // Mobile
-            echo '<td>' . htmlspecialchars($row['mobile']) . '</td>';
-            // Product (parse JSON)
-            $products = '-';
-            $decoded = json_decode($row['selected_products'], true);
-            if (is_array($decoded) && count($decoded)) {
-                $names = [];
-                foreach ($decoded as $prod) {
-                    if (isset($prod['name'])) {
-                        $names[] = htmlspecialchars($prod['name']);
-                    }
-                }
-                if ($names) {
-                    $products = implode(', ', $names);
+    $catMap = [
+        'birth-child' => 'Birth & Child Services',
+        'marriage-matching' => 'Marriage & Matching',
+        'astrology-consultation' => 'Astrology Consultation',
+        'muhurat-event' => 'Muhurat & Event Guidance',
+        'pooja-vastu-enquiry' => 'Pooja, Ritual & Vastu Enquiry',
+        'appointment' => 'Appointment',
+    ];
+    foreach ($rows as $row) {
+        echo '<tr>';
+        // Date
+        echo '<td>' . date('d M Y', strtotime($row['created_at'])) . '</td>';
+        // Type
+        $catSlug = $row['category_slug'];
+        $type = ($catSlug === 'appointment') ? 'Appointment' : 'Service';
+        echo '<td>' . htmlspecialchars($type) . '</td>';
+        // Customer
+        echo '<td>' . htmlspecialchars($row['customer_name']) . '</td>';
+        // Tracking ID
+        echo '<td>' . htmlspecialchars($row['tracking_id']) . '</td>';
+        // Mobile
+        echo '<td>' . htmlspecialchars($row['mobile']) . '</td>';
+        // Product (parse JSON)
+        $products = '-';
+        $decoded = json_decode($row['selected_products'], true);
+        if (is_array($decoded) && count($decoded)) {
+            $names = [];
+            foreach ($decoded as $prod) {
+                if (isset($prod['name'])) {
+                    $names[] = htmlspecialchars($prod['name']);
                 }
             }
-            echo '<td>' . $products . '</td>';
-            // Category (map slug)
-            $catSlug = $row['category_slug'];
-            echo '<td>' . (isset($catMap[$catSlug]) ? htmlspecialchars($catMap[$catSlug]) : htmlspecialchars($catSlug)) . '</td>';
-            // Status
-            echo '<td><span class="status-badge status-' . strtolower(str_replace(' ', '-', $row['service_status'])) . '">' . htmlspecialchars($row['service_status']) . '</span></td>';
-            // Payment
-            echo '<td><span class="status-badge payment-' . strtolower($row['payment_status']) . '">' . htmlspecialchars($row['payment_status']) . '</span></td>';
-            // Date
-            echo '<td>' . date('d M Y', strtotime($row['created_at'])) . '</td>';
-            // Action
-            echo '<td><a class="view-btn" href=\"../services/view.php?id=' . $row['id'] . '\">View</a></td>';
-            echo '</tr>';
+            if ($names) {
+                $products = implode(', ', $names);
+            }
         }
+        echo '<td>' . $products . '</td>';
+        // Category (map slug)
+        echo '<td>' . (isset($catMap[$catSlug]) ? htmlspecialchars($catMap[$catSlug]) : htmlspecialchars($catSlug)) . '</td>';
+        // Status
+        echo '<td><span class="status-badge status-' . strtolower(str_replace(' ', '-', $row['service_status'])) . '">' . htmlspecialchars($row['service_status']) . '</span></td>';
+        // Action
+        echo '<td><a class="view-btn" href="../services/view.php?id=' . $row['id'] . '">View</a></td>';
+        echo '</tr>';
+    }
 }
 
 // Pagination object for JS
