@@ -95,7 +95,7 @@ $recentRows = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
                     <tr>
                         <th>Date</th>
                         <th>Type</th>
-                        <th>Customer Name</th>
+                        <th>Customer</th>
                         <th>Tracking ID</th>
                         <th>Status</th>
                         <th>Action</th>
@@ -107,20 +107,17 @@ $recentRows = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php else: ?>
                     <?php foreach ($recentRows as $row): ?>
                         <tr>
-                            <td><?php echo date('d M Y', strtotime($row['created_at'])); ?></td>
+                            <td><?php echo date('d-m-Y', strtotime($row['created_at'])); ?></td>
                             <td><?php echo ($row['category_slug'] === 'appointment') ? 'Appointment' : 'Service'; ?></td>
                             <td><?php echo htmlspecialchars($row['customer_name']); ?></td>
                             <td><?php echo htmlspecialchars($row['tracking_id']); ?></td>
                             <td>
                                 <?php
-                                    $status = strtolower($row['service_status']);
-                                    $badgeClass = 'status-badge ';
-                                    if ($status === 'received') $badgeClass .= 'status-received';
-                                    elseif ($status === 'accepted') $badgeClass .= 'status-accepted';
-                                    elseif ($status === 'completed') $badgeClass .= 'status-completed';
-                                    else $badgeClass .= 'status-other';
+                                    $statusClass = 'status-' . strtolower(str_replace(' ', '-', $row['service_status']));
                                 ?>
-                                <span class="<?php echo $badgeClass; ?>"><?php echo htmlspecialchars($row['service_status']); ?></span>
+                                <span class="status-badge <?php echo $statusClass; ?>">
+                                    <?php echo htmlspecialchars($row['service_status']); ?>
+                                </span>
                             </td>
                             <td>
                                 <a class="view-btn" href="services/view.php?id=<?php echo $row['id']; ?><?php if ($row['category_slug'] === 'appointment') echo '&type=appointment'; ?>" target="_blank">View</a>
@@ -130,6 +127,10 @@ $recentRows = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php endif; ?>
                 </tbody>
             </table>
+            <div class="pagination" style="margin:18px 0;justify-content:center;gap:8px;">
+                <span class="page-link current">1</span>
+                <span class="page-link disabled">Next &raquo;</span>
+            </div>
         </div>
     </div>
 
