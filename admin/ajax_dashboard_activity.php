@@ -30,7 +30,7 @@ $totalPages = max(1, (int)ceil($totalRecords / $perPage));
 $page = min($page, $totalPages);
 $offset = ($page - 1) * $perPage;
 
-$sql = "SELECT id, created_at, category_slug, customer_name, tracking_id, service_status FROM service_requests $whereSql ORDER BY created_at DESC LIMIT $perPage OFFSET $offset";
+    $sql = "SELECT id, tracking_id, customer_name, mobile, selected_products, category_slug, service_status, payment_status, created_at FROM service_requests $whereSql ORDER BY created_at DESC LIMIT $perPage OFFSET $offset";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -38,17 +38,19 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 if (count($rows) === 0) {
     echo '<tr><td colspan="6" class="no-data">No recent activity found.</td></tr>';
 } else {
-    foreach ($rows as $row) {
-        echo '<tr>';
-        echo '<td>' . date('d-m-Y', strtotime($row['created_at'])) . '</td>';
-        echo '<td>' . ($row['category_slug'] === 'appointment' ? 'Appointment' : 'Service') . '</td>';
-        echo '<td>' . htmlspecialchars($row['customer_name']) . '</td>';
-        echo '<td>' . htmlspecialchars($row['tracking_id']) . '</td>';
-        $statusClass = 'status-' . strtolower(str_replace(' ', '-', $row['service_status']));
-        echo '<td><span class="status-badge ' . $statusClass . '">' . htmlspecialchars($row['service_status']) . '</span></td>';
-        echo '<td><a class="view-btn" href="services/view.php?id=' . $row['id'] . ($row['category_slug'] === 'appointment' ? '&type=appointment' : '') . '" target="_blank">View</a></td>';
-        echo '</tr>';
-    }
+        foreach ($rows as $row) {
+            echo '<tr>';
+            echo '<td>' . htmlspecialchars($row['tracking_id']) . '</td>';
+            echo '<td>' . htmlspecialchars($row['customer_name']) . '</td>';
+            echo '<td>' . htmlspecialchars($row['mobile']) . '</td>';
+            echo '<td>' . htmlspecialchars($row['selected_products']) . '</td>';
+            echo '<td>' . htmlspecialchars($row['category_slug']) . '</td>';
+            echo '<td><span class="status-badge status-' . strtolower(str_replace(' ', '-', $row['service_status'])) . '">' . htmlspecialchars($row['service_status']) . '</span></td>';
+            echo '<td><span class="status-badge payment-' . strtolower($row['payment_status']) . '">' . htmlspecialchars($row['payment_status']) . '</span></td>';
+            echo '<td>' . date('d M Y', strtotime($row['created_at'])) . '</td>';
+            echo '<td><a class="view-btn" href=\"../services/view.php?id=' . $row['id'] . '\">View</a></td>';
+            echo '</tr>';
+        }
 }
 
 // Pagination object for JS

@@ -239,9 +239,12 @@ $recentRows = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
                         <th>Date</th>
                         <th>Type</th>
                         <th>Customer</th>
-                        <th>Tracking ID</th>
-                        <th>Status</th>
-                        <th>Action</th>
+                            <th>Tracking ID</th>
+                            <th>Mobile</th>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Action</th>
                     </tr>
                 </thead>
                 <tbody id="activityTableBody">
