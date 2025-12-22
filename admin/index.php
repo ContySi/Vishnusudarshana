@@ -102,37 +102,70 @@ $recentRows = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
                     </tr>
                 </thead>
                 <tbody id="activityTableBody">
-                <?php if (count($recentRows) === 0): ?>
-                    <tr><td colspan="6" class="no-data">No recent activity found.</td></tr>
-                <?php else: ?>
-                    <?php foreach ($recentRows as $row): ?>
-                        <tr>
-                            <td><?php echo date('d-m-Y', strtotime($row['created_at'])); ?></td>
-                            <td><?php echo ($row['category_slug'] === 'appointment') ? 'Appointment' : 'Service'; ?></td>
-                            <td><?php echo htmlspecialchars($row['customer_name']); ?></td>
-                            <td><?php echo htmlspecialchars($row['tracking_id']); ?></td>
-                            <td>
-                                <?php
-                                    $statusClass = 'status-' . strtolower(str_replace(' ', '-', $row['service_status']));
-                                ?>
-                                <span class="status-badge <?php echo $statusClass; ?>">
-                                    <?php echo htmlspecialchars($row['service_status']); ?>
-                                </span>
-                            </td>
-                            <td>
-                                <a class="view-btn" href="services/view.php?id=<?php echo $row['id']; ?><?php if ($row['category_slug'] === 'appointment') echo '&type=appointment'; ?>" target="_blank">View</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+                <!-- AJAX loaded rows -->
                 </tbody>
             </table>
-            <div class="pagination" style="margin:18px 0;justify-content:center;gap:8px;">
-                <span class="page-link current">1</span>
-                <span class="page-link disabled">Next &raquo;</span>
-            </div>
+            <div id="dashboardPagination" class="pagination" style="margin:18px 0;justify-content:center;gap:8px;"></div>
         </div>
     </div>
+<script>
+function loadDashboardActivity(page = 1, search = '') {
+    const tbody = document.getElementById('activityTableBody');
+    const pag = document.getElementById('dashboardPagination');
+    fetch('ajax_dashboard_activity.php?page=' + page + '&search=' + encodeURIComponent(search))
+        .then(r => r.text())
+        .then(html => {
+            // Extract <script> for pagination
+            const scriptMatch = html.match(/<script[^>]*>[\s\S]*?<\/script>/i);
+            if (scriptMatch) {
+                html = html.replace(scriptMatch[0], '');
+                eval(scriptMatch[0].replace('<script>', '').replace('<\/script>', ''));
+            }
+            tbody.innerHTML = html;
+            renderDashboardPagination();
+        });
+}
+
+function renderDashboardPagination() {
+    const pag = document.getElementById('dashboardPagination');
+    if (!window.dashboardPagination) return;
+    const totalPages = window.dashboardPagination.totalPages || 1;
+    const currentPage = window.dashboardPagination.currentPage || 1;
+    let html = '';
+    if (currentPage > 1) {
+        html += '<a href="#" class="page-link" data-page="' + (currentPage - 1) + '">&laquo; Previous</a> ';
+    } else {
+        html += '<span class="page-link disabled">&laquo; Previous</span> ';
+    }
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === currentPage) {
+            html += '<span class="page-link current">' + i + '</span> ';
+        } else {
+            html += '<a href="#" class="page-link" data-page="' + i + '">' + i + '</a> ';
+        }
+    }
+    if (currentPage < totalPages) {
+        html += '<a href="#" class="page-link" data-page="' + (currentPage + 1) + '">Next &raquo;</a>';
+    } else {
+        html += '<span class="page-link disabled">Next &raquo;</span>';
+    }
+    pag.innerHTML = html;
+    pag.querySelectorAll('.page-link[data-page]').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const page = parseInt(link.getAttribute('data-page'), 10) || 1;
+            loadDashboardActivity(page, document.getElementById('searchInput').value);
+        });
+    });
+}
+
+document.getElementById('searchInput').addEventListener('input', function() {
+    loadDashboardActivity(1, this.value);
+});
+
+// Initial load
+loadDashboardActivity(1, '');
+</script>
 
     <!-- SECTION E: Quick Links -->
     <div class="summary-cards" style="gap:18px;flex-wrap:wrap;margin-bottom:0;">
