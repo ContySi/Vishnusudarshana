@@ -80,6 +80,7 @@ h1 { color: #800000; margin-bottom: 18px; }
                     <th>Mobile</th>
                     <th>Email</th>
                     <th>Preferred Date</th>
+                    <th>Scheduled Time</th>
                     <th>Payment Status</th>
                     <th>Service Status</th>
                     <th>Created Date</th>
@@ -91,6 +92,8 @@ h1 { color: #800000; margin-bottom: 18px; }
                 $formData = json_decode($a['form_data'], true) ?? [];
                 $preferredDate = $formData['preferred_date'] ?? '';
                 $preferredDisplay = $preferredDate ? (DateTime::createFromFormat('Y-m-d', $preferredDate)?->format('d-M-Y') ?: $preferredDate) : '—';
+                $fromTime = $formData['assigned_from_time'] ?? ($formData['time_from'] ?? '');
+                $toTime = $formData['assigned_to_time'] ?? ($formData['time_to'] ?? '');
                 $createdDisplay = '';
                 if (!empty($a['created_at'])) {
                     $co = new DateTime($a['created_at']);
@@ -104,6 +107,17 @@ h1 { color: #800000; margin-bottom: 18px; }
                     <td><?= htmlspecialchars($a['email']) ?></td>
                     <td style="font-weight:600;color:#800000;">
                         <?= htmlspecialchars($preferredDisplay) ?>
+                    </td>
+                    <td style="font-weight:600; color:#0056b3;">
+                        <?php
+                        if ($fromTime && $toTime) {
+                            $fromFmt = date('h:i A', strtotime($fromTime));
+                            $toFmt = date('h:i A', strtotime($toTime));
+                            echo htmlspecialchars($fromFmt . ' – ' . $toFmt);
+                        } else {
+                            echo 'Time not set';
+                        }
+                        ?>
                     </td>
                     <td><span class="status-badge payment-paid">Paid</span></td>
                     <td><span class="status-badge status-completed">Completed</span></td>
