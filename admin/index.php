@@ -38,53 +38,57 @@ $recentRows = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
-<div class="admin-container">
-    <h1 class="section-title" style="margin-bottom: 8px;">Admin Dashboard</h1>
+<div class="admin-container" style="max-width:1100px;margin:0 auto;padding:24px 12px;">
+    <h1 style="color:#800000;margin-bottom:18px;">Admin Dashboard</h1>
     <div style="text-align:center;color:#666;font-size:1.08rem;margin-bottom:28px;">Overview of appointments, services, and payments</div>
 
     <!-- SECTION B: Stat Cards -->
-    <div class="summary-cards">
-        <a href="services/appointments.php" class="summary-card" style="text-decoration:none;">
-            <div class="summary-count"><?php echo $totalAppointments; ?></div>
-            <div class="summary-label">Total Appointments</div>
-        </a>
-        <a href="services/appointments.php?status=Received" class="summary-card" style="text-decoration:none;">
-            <div class="summary-count"><?php echo $pendingAppointments; ?></div>
-            <div class="summary-label">Pending Appointments</div>
-        </a>
-        <a href="services/accepted-appointments.php" class="summary-card" style="text-decoration:none;">
-            <div class="summary-count"><?php echo $acceptedAppointments; ?></div>
-            <div class="summary-label">Accepted Appointments</div>
-        </a>
-        <a href="services/completed-appointments.php" class="summary-card" style="text-decoration:none;">
-            <div class="summary-count"><?php echo $completedAppointments; ?></div>
-            <div class="summary-label">Completed Appointments</div>
-        </a>
-        <a href="services/index.php" class="summary-card" style="text-decoration:none;">
-            <div class="summary-count"><?php echo $totalServiceRequests; ?></div>
-            <div class="summary-label">Total Service Requests</div>
-        </a>
+    <div class="summary-cards" style="gap:18px;margin-bottom:24px;flex-wrap:wrap;">
+        <div class="summary-card" onclick="window.location.href='services/appointments.php'" style="cursor:pointer;">
+            <div class="summary-count" style="font-size:2.2em;font-weight:700;color:#800000;"><?php echo $totalAppointments; ?></div>
+            <div class="summary-label" style="font-size:1em;color:#444;">Total Appointments</div>
+        </div>
+        <div class="summary-card" onclick="window.location.href='services/appointments.php?status=Received'" style="cursor:pointer;">
+            <div class="summary-count" style="font-size:2.2em;font-weight:700;color:#800000;"><?php echo $pendingAppointments; ?></div>
+            <div class="summary-label" style="font-size:1em;color:#444;">Pending Appointments</div>
+        </div>
+        <div class="summary-card" onclick="window.location.href='services/accepted-appointments.php'" style="cursor:pointer;">
+            <div class="summary-count" style="font-size:2.2em;font-weight:700;color:#800000;"><?php echo $acceptedAppointments; ?></div>
+            <div class="summary-label" style="font-size:1em;color:#444;">Accepted Appointments</div>
+        </div>
+        <div class="summary-card" onclick="window.location.href='services/completed-appointments.php'" style="cursor:pointer;">
+            <div class="summary-count" style="font-size:2.2em;font-weight:700;color:#800000;"><?php echo $completedAppointments; ?></div>
+            <div class="summary-label" style="font-size:1em;color:#444;">Completed Appointments</div>
+        </div>
+        <div class="summary-card" onclick="window.location.href='services/index.php'" style="cursor:pointer;">
+            <div class="summary-count" style="font-size:2.2em;font-weight:700;color:#800000;"><?php echo $totalServiceRequests; ?></div>
+            <div class="summary-label" style="font-size:1em;color:#444;">Total Service Requests</div>
+        </div>
     </div>
 
     <!-- SECTION C: Today Snapshot -->
-    <div class="summary-cards" style="gap:18px;margin-bottom:32px;">
-        <div class="summary-card" style="flex:1 1 0;min-width:0;">
-            <div class="summary-count"><?php echo $todayAppointments; ?></div>
-            <div class="summary-label">Today's Appointments</div>
+    <div class="summary-cards" style="gap:18px;margin-bottom:32px;flex-wrap:wrap;">
+        <div class="summary-card">
+            <div class="summary-count" style="font-size:2.2em;font-weight:700;color:#800000;"><?php echo $todayAppointments; ?></div>
+            <div class="summary-label" style="font-size:1em;color:#444;">Today's Appointments</div>
         </div>
-        <div class="summary-card" style="flex:1 1 0;min-width:0;">
-            <div class="summary-count"><?php echo $todayServices; ?></div>
-            <div class="summary-label">Today's Services</div>
+        <div class="summary-card">
+            <div class="summary-count" style="font-size:2.2em;font-weight:700;color:#800000;"><?php echo $todayServices; ?></div>
+            <div class="summary-label" style="font-size:1em;color:#444;">Today's Services</div>
         </div>
-        <div class="summary-card" style="flex:1 1 0;min-width:0;">
-            <div class="summary-count"><?php echo $todayPayments; ?></div>
-            <div class="summary-label">Today's Payments (Paid)</div>
+        <div class="summary-card">
+            <div class="summary-count" style="font-size:2.2em;font-weight:700;color:#800000;"><?php echo $todayPayments; ?></div>
+            <div class="summary-label" style="font-size:1em;color:#444;">Today's Payments (Paid)</div>
         </div>
     </div>
 
     <!-- SECTION D: Recent Activity Table -->
     <div style="margin-bottom:36px;">
-        <div class="section-title" style="margin-bottom:16px;">Recent Activity</div>
+        <div class="section-title" style="font-size:22px;color:#800000;font-weight:700;margin-bottom:16px;text-align:center;">Recent Activity</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <input type="text" id="searchInput" placeholder="Search..." style="padding:7px 12px;border-radius:6px;border:1px solid #ccc;font-size:1em;max-width:220px;">
+            <div style="font-size:0.98em;color:#888;">Showing max 10 records</div>
+        </div>
         <div style="overflow-x:auto;">
             <table class="service-table">
                 <thead>
@@ -97,7 +101,7 @@ $recentRows = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
                         <th>Action</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="activityTableBody">
                 <?php if (count($recentRows) === 0): ?>
                     <tr><td colspan="6" class="no-data">No recent activity found.</td></tr>
                 <?php else: ?>
@@ -131,31 +135,42 @@ $recentRows = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
 
     <!-- SECTION E: Quick Links -->
     <div class="summary-cards" style="gap:18px;flex-wrap:wrap;margin-bottom:0;">
-        <a href="services/appointments.php" class="action-card" style="min-width:180px;text-decoration:none;">
+        <div class="summary-card" onclick="window.location.href='services/appointments.php'" style="cursor:pointer;min-width:180px;">
             <div class="card-icon">📅</div>
-            <h4>Manage Appointments</h4>
-        </a>
-        <a href="services/accepted-appointments.php" class="action-card" style="min-width:180px;text-decoration:none;">
+            <div class="summary-label">Manage Appointments</div>
+        </div>
+        <div class="summary-card" onclick="window.location.href='services/accepted-appointments.php'" style="cursor:pointer;min-width:180px;">
             <div class="card-icon">✅</div>
-            <h4>Accepted Appointments</h4>
-        </a>
-        <a href="services/completed-appointments.php" class="action-card" style="min-width:180px;text-decoration:none;">
+            <div class="summary-label">Accepted Appointments</div>
+        </div>
+        <div class="summary-card" onclick="window.location.href='services/completed-appointments.php'" style="cursor:pointer;min-width:180px;">
             <div class="card-icon">✔️</div>
-            <h4>Completed Appointments</h4>
-        </a>
-        <a href="services/index.php" class="action-card" style="min-width:180px;text-decoration:none;">
+            <div class="summary-label">Completed Appointments</div>
+        </div>
+        <div class="summary-card" onclick="window.location.href='services/index.php'" style="cursor:pointer;min-width:180px;">
             <div class="card-icon">🛎️</div>
-            <h4>Service Requests</h4>
-        </a>
-        <a href="../admin/products/index.php" class="action-card" style="min-width:180px;text-decoration:none;">
+            <div class="summary-label">Service Requests</div>
+        </div>
+        <div class="summary-card" onclick="window.location.href='../admin/products/index.php'" style="cursor:pointer;min-width:180px;">
             <div class="card-icon">📦</div>
-            <h4>Products</h4>
-        </a>
-        <a href="../payment-success.php" class="action-card" style="min-width:180px;text-decoration:none;">
+            <div class="summary-label">Products</div>
+        </div>
+        <div class="summary-card" onclick="window.location.href='../payment-success.php'" style="cursor:pointer;min-width:180px;">
             <div class="card-icon">💳</div>
-            <h4>Payments</h4>
-        </a>
+            <div class="summary-label">Payments</div>
+        </div>
     </div>
 </div>
+<script>
+// Table search filter
+document.getElementById('searchInput').addEventListener('keyup', function() {
+    var filter = this.value.toLowerCase();
+    var rows = document.querySelectorAll('#activityTableBody tr');
+    rows.forEach(function(row) {
+        var text = row.textContent.toLowerCase();
+        row.style.display = text.indexOf(filter) > -1 ? '' : 'none';
+    });
+});
+</script>
 </body>
 </html>
