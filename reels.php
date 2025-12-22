@@ -32,33 +32,40 @@ body {
     background: #000;
     overflow: hidden;
     z-index: 1;
-    height: calc(100dvh - var(--header-height, 0px));
+    height: var(--reel-height, 100vh);
     touch-action: pan-y;
-    /* Fallback for browsers without dvh support */
-    height: calc(100vh - var(--header-height, 0px));
-    /* Safe area for iOS notch */
     padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .reels-track {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100vw;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.55s cubic-bezier(.4,1.4,.6,1);
     will-change: transform;
+    transition: transform 0.55s cubic-bezier(.4,1.4,.6,1);
 }
 
 .reel-slide {
     width: 100vw;
-    height: calc(100dvh - var(--header-height, 0px));
+    height: var(--reel-height, 100vh);
+    margin: 0;
+    padding: 0;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     background: #000;
-    /* Fallback for browsers without dvh support */
-    height: calc(100vh - var(--header-height, 0px));
+    box-sizing: border-box;
+}
+
+.reel-embed-container {
+    width: 100vw;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
 }
 
 .reel-slide blockquote.instagram-media {
@@ -98,17 +105,20 @@ body {
             <?php else: ?>
                 <?php foreach ($reels as $reel): ?>
                     <div class="reel-slide">
-                        <blockquote
-                            class="instagram-media"
-                            data-instgrm-permalink="<?php echo htmlspecialchars($reel['reel_url'], ENT_QUOTES, 'UTF-8'); ?>"
-                            data-instgrm-version="14">
-                        </blockquote>
+                        <div class="reel-embed-container">
+                            <blockquote
+                                class="instagram-media"
+                                data-instgrm-permalink="<?php echo htmlspecialchars($reel['reel_url'], ENT_QUOTES, 'UTF-8'); ?>"
+                                data-instgrm-version="14">
+                            </blockquote>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>
     </div>
 </main>
+
 
 <script>
 // ================= STATE =================
@@ -134,22 +144,27 @@ function getHeaderHeight() {
 }
 
 function getViewportHeight() {
-    // Prefer visualViewport height if available (mobile browsers)
     if (window.visualViewport) {
         return window.visualViewport.height;
     }
-    // Fallback to window.innerHeight
     return window.innerHeight;
 }
 
-function setHeaderHeightVar() {
-    const h = getHeaderHeight();
-    document.documentElement.style.setProperty('--header-height', h + 'px');
-    reelHeight = getViewportHeight() - h;
+function setLayoutVars() {
+    const headerHeight = getHeaderHeight();
+    const viewportHeight = getViewportHeight();
+    reelHeight = viewportHeight - headerHeight;
+    document.documentElement.style.setProperty('--header-height', headerHeight + 'px');
+    document.documentElement.style.setProperty('--reel-height', reelHeight + 'px');
+    // Set wrapper and slide heights directly for absolute determinism
+    if (wrapper) wrapper.style.height = reelHeight + 'px';
+    slides.forEach(slide => { slide.style.height = reelHeight + 'px'; });
 }
 
-function updateTrack() {
+function updateTrack(animate = true) {
+    if (!animate) track.style.transition = 'none';
     track.style.transform = `translateY(-${currentIndex * reelHeight}px)`;
+    if (!animate) setTimeout(() => { track.style.transition = ''; }, 0);
 }
 
 function gotoIndex(idx) {
@@ -195,8 +210,8 @@ window.addEventListener('touchend', () => {
 
 // ================= RESIZE & ORIENTATION HANDLER =================
 function handleResize() {
-    setHeaderHeightVar();
-    updateTrack();
+    setLayoutVars();
+    updateTrack(false); // No animation during resize
 }
 window.addEventListener('resize', handleResize);
 window.addEventListener('orientationchange', handleResize);
@@ -220,8 +235,8 @@ function loadInstagramEmbedScript(callback) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    setHeaderHeightVar();
-    updateTrack();
+    setLayoutVars();
+    updateTrack(false);
     loadInstagramEmbedScript(() => {
         if (window.instgrm && window.instgrm.Embeds) {
             window.instgrm.Embeds.process();
