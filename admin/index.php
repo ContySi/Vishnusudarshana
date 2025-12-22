@@ -68,101 +68,123 @@ $recentRows = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
 </head>
 <body>
 <div class="admin-container">
-    <!-- SECTION A: Page Header -->
-    <div class="dashboard-header">
-        <h1>Admin Dashboard</h1>
-        <p>Overview of appointments, services, and payments</p>
-    </div>
+    <h1 class="section-title" style="margin-bottom: 8px;">Admin Dashboard</h1>
+    <div style="text-align:center;color:#666;font-size:1.08rem;margin-bottom:28px;">Overview of appointments, services, and payments</div>
 
     <!-- SECTION B: Stat Cards -->
-    <div class="stat-row">
-        <a href="services/appointments.php" class="stat-card">
-            <div class="stat-number"><?php echo $totalAppointments; ?></div>
-            <div class="stat-label">Total Appointments</div>
+    <div class="summary-cards">
+        <a href="services/appointments.php" class="summary-card" style="text-decoration:none;">
+            <div class="summary-count"><?php echo $totalAppointments; ?></div>
+            <div class="summary-label">Total Appointments</div>
         </a>
-        <a href="services/appointments.php?status=Received" class="stat-card">
-            <div class="stat-number"><?php echo $pendingAppointments; ?></div>
-            <div class="stat-label">Pending Appointments</div>
+        <a href="services/appointments.php?status=Received" class="summary-card" style="text-decoration:none;">
+            <div class="summary-count"><?php echo $pendingAppointments; ?></div>
+            <div class="summary-label">Pending Appointments</div>
         </a>
-        <a href="services/accepted-appointments.php" class="stat-card">
-            <div class="stat-number"><?php echo $acceptedAppointments; ?></div>
-            <div class="stat-label">Accepted Appointments</div>
+        <a href="services/accepted-appointments.php" class="summary-card" style="text-decoration:none;">
+            <div class="summary-count"><?php echo $acceptedAppointments; ?></div>
+            <div class="summary-label">Accepted Appointments</div>
         </a>
-        <a href="services/completed-appointments.php" class="stat-card">
-            <div class="stat-number"><?php echo $completedAppointments; ?></div>
-            <div class="stat-label">Completed Appointments</div>
+        <a href="services/completed-appointments.php" class="summary-card" style="text-decoration:none;">
+            <div class="summary-count"><?php echo $completedAppointments; ?></div>
+            <div class="summary-label">Completed Appointments</div>
         </a>
-        <a href="services/index.php" class="stat-card">
-            <div class="stat-number"><?php echo $totalServiceRequests; ?></div>
-            <div class="stat-label">Total Service Requests</div>
+        <a href="services/index.php" class="summary-card" style="text-decoration:none;">
+            <div class="summary-count"><?php echo $totalServiceRequests; ?></div>
+            <div class="summary-label">Total Service Requests</div>
         </a>
     </div>
 
     <!-- SECTION C: Today Snapshot -->
-    <div class="mini-row">
-        <div class="mini-card">
-            <div class="mini-number"><?php echo $todayAppointments; ?></div>
-            <div class="mini-label">Today's Appointments</div>
+    <div class="summary-cards" style="gap:18px;margin-bottom:32px;">
+        <div class="summary-card" style="flex:1 1 0;min-width:0;">
+            <div class="summary-count"><?php echo $todayAppointments; ?></div>
+            <div class="summary-label">Today's Appointments</div>
         </div>
-        <div class="mini-card">
-            <div class="mini-number"><?php echo $todayServices; ?></div>
-            <div class="mini-label">Today's Services</div>
+        <div class="summary-card" style="flex:1 1 0;min-width:0;">
+            <div class="summary-count"><?php echo $todayServices; ?></div>
+            <div class="summary-label">Today's Services</div>
         </div>
-        <div class="mini-card">
-            <div class="mini-number"><?php echo $todayPayments; ?></div>
-            <div class="mini-label">Today's Payments (Paid)</div>
+        <div class="summary-card" style="flex:1 1 0;min-width:0;">
+            <div class="summary-count"><?php echo $todayPayments; ?></div>
+            <div class="summary-label">Today's Payments (Paid)</div>
         </div>
     </div>
 
     <!-- SECTION D: Recent Activity Table -->
-    <div style="margin-bottom:32px;">
-        <h2 style="font-size:1.25rem;color:#2c3e50;margin-bottom:12px;">Recent Activity</h2>
+    <div style="margin-bottom:36px;">
+        <div class="section-title" style="margin-bottom:16px;">Recent Activity</div>
         <div style="overflow-x:auto;">
-        <table class="activity-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Customer Name</th>
-                    <th>Tracking ID</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-            <?php if (count($recentRows) === 0): ?>
-                <tr><td colspan="6" class="empty-state">No recent activity found.</td></tr>
-            <?php else: ?>
-                <?php foreach ($recentRows as $row): ?>
+            <table class="service-table">
+                <thead>
                     <tr>
-                        <td><?php echo date('d M Y', strtotime($row['created_at'])); ?></td>
-                        <td><?php echo ($row['category_slug'] === 'appointment') ? 'Appointment' : 'Service'; ?></td>
-                        <td><?php echo htmlspecialchars($row['customer_name']); ?></td>
-                        <td><?php echo htmlspecialchars($row['tracking_id']); ?></td>
-                        <td><?php echo htmlspecialchars($row['service_status']); ?></td>
-                        <td>
-                            <a class="view-btn" href="services/view.php?id=<?php echo $row['id']; ?><?php if ($row['category_slug'] === 'appointment') echo '&type=appointment'; ?>" target="_blank">View</a>
-                        </td>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Customer Name</th>
+                        <th>Tracking ID</th>
+                        <th>Status</th>
+                        <th>Action</th>
                     </tr>
-                <?php endforeach; ?>
-            <?php endif; ?>
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                <?php if (count($recentRows) === 0): ?>
+                    <tr><td colspan="6" class="no-data">No recent activity found.</td></tr>
+                <?php else: ?>
+                    <?php foreach ($recentRows as $row): ?>
+                        <tr>
+                            <td><?php echo date('d M Y', strtotime($row['created_at'])); ?></td>
+                            <td><?php echo ($row['category_slug'] === 'appointment') ? 'Appointment' : 'Service'; ?></td>
+                            <td><?php echo htmlspecialchars($row['customer_name']); ?></td>
+                            <td><?php echo htmlspecialchars($row['tracking_id']); ?></td>
+                            <td>
+                                <?php
+                                    $status = strtolower($row['service_status']);
+                                    $badgeClass = 'status-badge ';
+                                    if ($status === 'received') $badgeClass .= 'status-received';
+                                    elseif ($status === 'accepted') $badgeClass .= 'status-accepted';
+                                    elseif ($status === 'completed') $badgeClass .= 'status-completed';
+                                    else $badgeClass .= 'status-other';
+                                ?>
+                                <span class="<?php echo $badgeClass; ?>"><?php echo htmlspecialchars($row['service_status']); ?></span>
+                            </td>
+                            <td>
+                                <a class="view-btn" href="services/view.php?id=<?php echo $row['id']; ?><?php if ($row['category_slug'] === 'appointment') echo '&type=appointment'; ?>" target="_blank">View</a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                </tbody>
+            </table>
         </div>
     </div>
 
     <!-- SECTION E: Quick Links -->
-    <div class="quick-links">
-        <a href="services/appointments.php" class="quick-link-btn">Manage Appointments</a>
-        <a href="services/accepted-appointments.php" class="quick-link-btn">Accepted Appointments</a>
-        <a href="services/completed-appointments.php" class="quick-link-btn">Completed Appointments</a>
-        <a href="services/index.php" class="quick-link-btn">Service Requests</a>
-        <a href="../admin/products/index.php" class="quick-link-btn">Products</a>
-        <a href="../payment-success.php" class="quick-link-btn">Payments</a>
+    <div class="summary-cards" style="gap:18px;flex-wrap:wrap;margin-bottom:0;">
+        <a href="services/appointments.php" class="action-card" style="min-width:180px;text-decoration:none;">
+            <div class="card-icon">📅</div>
+            <h4>Manage Appointments</h4>
+        </a>
+        <a href="services/accepted-appointments.php" class="action-card" style="min-width:180px;text-decoration:none;">
+            <div class="card-icon">✅</div>
+            <h4>Accepted Appointments</h4>
+        </a>
+        <a href="services/completed-appointments.php" class="action-card" style="min-width:180px;text-decoration:none;">
+            <div class="card-icon">✔️</div>
+            <h4>Completed Appointments</h4>
+        </a>
+        <a href="services/index.php" class="action-card" style="min-width:180px;text-decoration:none;">
+            <div class="card-icon">🛎️</div>
+            <h4>Service Requests</h4>
+        </a>
+        <a href="../admin/products/index.php" class="action-card" style="min-width:180px;text-decoration:none;">
+            <div class="card-icon">📦</div>
+            <h4>Products</h4>
+        </a>
+        <a href="../payment-success.php" class="action-card" style="min-width:180px;text-decoration:none;">
+            <div class="card-icon">💳</div>
+            <h4>Payments</h4>
+        </a>
     </div>
 </div>
-<script>
-// Responsive tweaks if needed
-</script>
 </body>
 </html>
