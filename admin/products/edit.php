@@ -63,11 +63,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Edit Product</title>
     <link rel="stylesheet" href="/assets/css/style.css">
     <style>
+    body { font-family: Arial, sans-serif; background: #f7f7fa; margin: 0; }
     .admin-container { max-width: 700px; margin: 0 auto; padding: 24px 12px; }
-    h1 { color: #800000; margin-bottom: 18px; }
+    h1 { color: #800000; margin-bottom: 18px; font-family: inherit; }
     .form-label { font-weight: 600; display:block; margin-bottom:6px; }
-    .form-input, .form-select, .form-textarea { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #e0bebe; font-size:1.08em; margin-bottom:16px; }
-    .form-btn { background:#800000; color:#fff; border:none; border-radius:8px; padding:12px 0; font-size:1.08em; font-weight:600; width:100%; cursor:pointer; margin-top:10px; }
+    .form-input, .form-select, .form-textarea { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #e0bebe; font-size:1.08em; margin-bottom:16px; font-family: inherit; }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: #800000; outline: none; }
+    .form-btn { background:#800000; color:#fff; border:none; border-radius:8px; padding:12px 0; font-size:1.08em; font-weight:600; width:100%; cursor:pointer; margin-top:10px; transition: background 0.15s; }
+    .form-btn:hover { background: #a00000; }
     .back-link { display:inline-block; margin-bottom:18px; color:#800000; text-decoration:none; font-weight:600; }
     .error-list { color:#c00; margin-bottom:18px; }
     </style>
