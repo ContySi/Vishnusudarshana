@@ -5,7 +5,7 @@
 // --- BASE_URL dynamic detection (works for /, /1/, /subdir/, etc.) ---
 $scriptName = $_SERVER['SCRIPT_NAME'];
 // Example: /1/admin/services/completed-appointments.php
-$basePath = explode('/1nikhil/', $scriptName)[0];
+$basePath = explode('/1/', $scriptName)[0];
 // Result: /1 (or empty string for root)
 
 $menu = [
@@ -16,16 +16,16 @@ $menu = [
     'Appointments' => [
         'icon' => '📅',
         'submenu' => [
-            'Pending Appointments'   => '1/admin/services/appointments.php',
-            'Accepted Appointments'  => '1/admin/services/accepted-appointments.php',
-            'Completed Appointments' => '1/admin/services/completed-appointments.php',
+            'Pending Appointments'   => '/admin/services/appointments.php',
+            'Accepted Appointments'  => '/admin/services/accepted-appointments.php',
+            'Completed Appointments' => '/admin/services/completed-appointments.php',
         ]
     ],
     'Services' => [
         'icon' => '🛠️',
         'submenu' => [
-            'Service Requests' => '1/admin/products/index.php',
-            'Add New Service'  => '1/admin/products/add.php',
+            'Service Requests' => '/admin/products/index.php',
+            'Add New Service'  => '/admin/products/add.php',
             'Categories'       => '/admin/products/categories.php',
         ]
     ],
