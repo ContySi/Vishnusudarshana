@@ -35,7 +35,112 @@ $recentRows = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
+        <link rel="stylesheet" href="/assets/css/style.css">
+        <style>
+        .filter-bar label {
+            font-weight: 600;
+        }
+        .filter-bar select,
+        .filter-bar button {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 1em;
+        }
+        .filter-bar button {
+            background: #800000;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        /* TABLE */
+        .service-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            box-shadow: 0 2px 12px #e0bebe22;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .service-table th,
+        .service-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #f3caca;
+            text-align: left;
+        }
+        .service-table th {
+            background: #f9eaea;
+            color: #800000;
+        }
+        .service-table tbody tr:hover {
+            background: #f3f7fa;
+            cursor: pointer;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9em;
+            display: inline-block;
+            min-width: 80px;
+            text-align: center;
+        }
+        /* Service Status Colors */
+        .status-received { background: #e5f0ff; color: #0056b3; }
+        .status-in-progress { background: #fffbe5; color: #b36b00; }
+        .status-completed { background: #e5ffe5; color: #1a8917; }
+        .status-cancelled { background: #ffeaea; color: #c00; }
+        /* Payment Status Colors */
+        .payment-paid { background: #e5ffe5; color: #1a8917; }
+        .payment-pending { background: #f7f7f7; color: #b36b00; }
+        .payment-failed { background: #ffeaea; color: #c00; }
+        .view-btn {
+            background: #800000;
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .no-data {
+            text-align: center;
+            color: #777;
+            padding: 24px;
+        }
+        /* PAGINATION */
+        .pagination {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin: 18px 0;
+            flex-wrap: wrap;
+        }
+        .pagination a,
+        .pagination span {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            background: #fff;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            color: #333;
+        }
+        .pagination .page-link.current {
+            background: #800000;
+            color: #fff;
+            border-color: #800000;
+        }
+        .pagination .page-link.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        @media (max-width: 700px) {
+            .summary-cards {
+                flex-direction: column;
+            }
+        }
+        </style>
 </head>
 <body>
 <div class="admin-container" style="max-width:1100px;margin:0 auto;padding:24px 12px;">
