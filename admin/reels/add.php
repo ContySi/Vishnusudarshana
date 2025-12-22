@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 <?php include __DIR__ . '/../includes/top-menu.php'; ?>
 <div class="admin-container">
-	<h1>Add Reel</h1>
+	<!-- The 'Add Reel' header has been removed as it was redundant -->
 	<a href="index.php" class="back-link">&larr; Back to Reel List</a>
 	<?php if ($errors): ?>
 		<ul class="error-list">
