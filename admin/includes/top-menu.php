@@ -16,16 +16,16 @@ $menu = [
     'Appointments' => [
         'icon' => '📅',
         'submenu' => [
-            'Pending Appointments'   => '/admin/services/appointments.php',
-            'Accepted Appointments'  => '/admin/services/accepted-appointments.php',
-            'Completed Appointments' => '/admin/services/completed-appointments.php',
+            'Pending Appointments'   => '1/admin/services/appointments.php',
+            'Accepted Appointments'  => '1/admin/services/accepted-appointments.php',
+            'Completed Appointments' => '1/admin/services/completed-appointments.php',
         ]
     ],
     'Services' => [
         'icon' => '🛠️',
         'submenu' => [
-            'Service Requests' => '/admin/products/index.php',
-            'Add New Service'  => '/admin/products/add.php',
+            'Service Requests' => '1/admin/products/index.php',
+            'Add New Service'  => '1/admin/products/add.php',
             'Categories'       => '/admin/products/categories.php',
         ]
     ],
