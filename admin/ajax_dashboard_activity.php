@@ -80,7 +80,7 @@ if (count($rows) === 0) {
         // Status
         echo '<td><span class="status-badge status-' . strtolower(str_replace(' ', '-', $row['service_status'])) . '">' . htmlspecialchars($row['service_status']) . '</span></td>';
         // Action
-        echo '<td><a class="view-btn" href="../services/view.php?id=' . $row['id'] . '">View</a></td>';
+        echo '<td><a class="view-btn" href="../admin/services/view.php?id=' . $row['id'] . '">View</a></td>';
         echo '</tr>';
     }
 }
