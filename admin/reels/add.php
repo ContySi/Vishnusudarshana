@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	// Validation
 	if ($reel_url === '') {
 		$errors[] = 'Reel URL is required.';
-	} elseif (!preg_match('#^https://www\.instagram\.com/reel/[^/?#]+/?$#', $reel_url)) {
+	} elseif (!preg_match('#^https://www\.instagram\.com/reel/[A-Za-z0-9_-]+/?$#', $reel_url)) {
 		$errors[] = 'URL must be a valid Instagram Reel link.';
 	} else {
 		// Prevent duplicate
