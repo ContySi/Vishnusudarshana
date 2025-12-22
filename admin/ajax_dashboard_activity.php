@@ -38,16 +38,47 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 if (count($rows) === 0) {
     echo '<tr><td colspan="6" class="no-data">No recent activity found.</td></tr>';
 } else {
+        $catMap = [
+            'birth-child' => 'Birth & Child Services',
+            'marriage-matching' => 'Marriage & Matching',
+            'astrology-consultation' => 'Astrology Consultation',
+            'muhurat-event' => 'Muhurat & Event Guidance',
+            'pooja-vastu-enquiry' => 'Pooja, Ritual & Vastu Enquiry',
+            'appointment' => 'Appointment',
+        ];
         foreach ($rows as $row) {
             echo '<tr>';
+            // Tracking ID
             echo '<td>' . htmlspecialchars($row['tracking_id']) . '</td>';
+            // Customer Name
             echo '<td>' . htmlspecialchars($row['customer_name']) . '</td>';
+            // Mobile
             echo '<td>' . htmlspecialchars($row['mobile']) . '</td>';
-            echo '<td>' . htmlspecialchars($row['selected_products']) . '</td>';
-            echo '<td>' . htmlspecialchars($row['category_slug']) . '</td>';
+            // Product (parse JSON)
+            $products = '-';
+            $decoded = json_decode($row['selected_products'], true);
+            if (is_array($decoded) && count($decoded)) {
+                $names = [];
+                foreach ($decoded as $prod) {
+                    if (isset($prod['name'])) {
+                        $names[] = htmlspecialchars($prod['name']);
+                    }
+                }
+                if ($names) {
+                    $products = implode(', ', $names);
+                }
+            }
+            echo '<td>' . $products . '</td>';
+            // Category (map slug)
+            $catSlug = $row['category_slug'];
+            echo '<td>' . (isset($catMap[$catSlug]) ? htmlspecialchars($catMap[$catSlug]) : htmlspecialchars($catSlug)) . '</td>';
+            // Status
             echo '<td><span class="status-badge status-' . strtolower(str_replace(' ', '-', $row['service_status'])) . '">' . htmlspecialchars($row['service_status']) . '</span></td>';
+            // Payment
             echo '<td><span class="status-badge payment-' . strtolower($row['payment_status']) . '">' . htmlspecialchars($row['payment_status']) . '</span></td>';
+            // Date
             echo '<td>' . date('d M Y', strtotime($row['created_at'])) . '</td>';
+            // Action
             echo '<td><a class="view-btn" href=\"../services/view.php?id=' . $row['id'] . '\">View</a></td>';
             echo '</tr>';
         }
