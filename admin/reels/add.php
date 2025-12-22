@@ -1,4 +1,3 @@
-echo "<h1>Add Reel</h1>";
 <?php
 require_once __DIR__ . '/../../config/db.php';
 
