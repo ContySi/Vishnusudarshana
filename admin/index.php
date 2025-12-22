@@ -35,36 +35,7 @@ $recentRows = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="assets/css/style.css">
-    <style>
-        .admin-container { max-width: 1200px; margin: 0 auto; padding: 24px; }
-        .dashboard-header { margin-bottom: 24px; }
-        .dashboard-header h1 { font-size: 2.2rem; color: #2c3e50; margin-bottom: 6px; }
-        .dashboard-header p { color: #666; font-size: 1.1rem; }
-        .stat-row, .mini-row, .quick-links { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 32px; }
-        .stat-card, .mini-card { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(44,62,80,0.07); padding: 28px 24px; flex: 1 1 180px; min-width: 180px; text-align: center; transition: box-shadow 0.2s; cursor: pointer; text-decoration: none; color: inherit; }
-        .stat-card:hover, .mini-card:hover { box-shadow: 0 4px 16px rgba(44,62,80,0.13); }
-        .stat-card .stat-number { font-size: 2.3rem; font-weight: 700; color: #1abc9c; margin-bottom: 8px; }
-        .stat-card .stat-label { font-size: 1.1rem; color: #34495e; }
-        .mini-card { padding: 18px 10px; background: #f8f9fa; border: 1px solid #e1e4e8; }
-        .mini-card .mini-number { font-size: 1.3rem; font-weight: 600; color: #2980b9; }
-        .mini-card .mini-label { font-size: 0.98rem; color: #555; }
-        .activity-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(44,62,80,0.07); }
-        .activity-table th, .activity-table td { padding: 12px 10px; text-align: left; }
-        .activity-table th { background: #f4f6f8; color: #2c3e50; font-weight: 600; }
-        .activity-table tr { border-bottom: 1px solid #eaeaea; }
-        .activity-table tr:last-child { border-bottom: none; }
-        .activity-table td .view-btn { background: #1abc9c; color: #fff; border: none; border-radius: 4px; padding: 6px 14px; font-size: 0.98rem; cursor: pointer; text-decoration: none; transition: background 0.18s; }
-        .activity-table td .view-btn:hover { background: #16a085; }
-        .empty-state { text-align: center; color: #888; padding: 32px 0; font-size: 1.1rem; }
-        .quick-links { gap: 16px; flex-wrap: wrap; }
-        .quick-link-btn { background: #2980b9; color: #fff; border: none; border-radius: 6px; padding: 14px 28px; font-size: 1.08rem; font-weight: 500; cursor: pointer; text-decoration: none; margin-bottom: 8px; transition: background 0.18s; }
-        .quick-link-btn:hover { background: #1abc9c; color: #fff; }
-        @media (max-width: 900px) {
-            .stat-row, .mini-row, .quick-links { flex-direction: column; gap: 14px; }
-            .stat-card, .mini-card { min-width: 0; }
-        }
-    </style>
+    <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
 <div class="admin-container">
