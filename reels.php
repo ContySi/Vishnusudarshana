@@ -17,20 +17,27 @@ body {
     overflow: hidden !important;
     font-family: 'Inter', Arial, sans-serif;
     background: #000;
+    overscroll-behavior-y: contain;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 ::-webkit-scrollbar { display: none; }
 
 .reels-wrapper {
     position: fixed;
+    top: var(--header-height, 0px);
     left: 0;
-    right: 0;
     width: 100vw;
     background: #000;
     overflow: hidden;
     z-index: 1;
-    top: var(--header-height, 0px);
+    height: calc(100dvh - var(--header-height, 0px));
+    touch-action: pan-y;
+    /* Fallback for browsers without dvh support */
     height: calc(100vh - var(--header-height, 0px));
-    /* No inset: 0, so header stays above */
+    /* Safe area for iOS notch */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .reels-track {
@@ -44,12 +51,14 @@ body {
 
 .reel-slide {
     width: 100vw;
-    height: calc(100vh - var(--header-height, 0px));
+    height: calc(100dvh - var(--header-height, 0px));
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     background: #000;
+    /* Fallback for browsers without dvh support */
+    height: calc(100vh - var(--header-height, 0px));
 }
 
 .reel-slide blockquote.instagram-media {
@@ -57,14 +66,24 @@ body {
     background: #fff;
     border-radius: 18px;
     box-shadow: 0 2px 10px rgba(139,21,56,0.08);
-    max-width: 420px;
     width: 100%;
+    max-width: 420px;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 767px) {
     .reel-slide blockquote.instagram-media {
         max-width: 100vw;
         border-radius: 0;
+    }
+}
+@media (min-width: 768px) and (max-width: 1024px) {
+    .reel-slide blockquote.instagram-media {
+        max-width: 520px;
+    }
+}
+@media (min-width: 1025px) {
+    .reel-slide blockquote.instagram-media {
+        max-width: 420px;
     }
 }
 </style>
@@ -108,17 +127,25 @@ const slides = document.querySelectorAll('.reel-slide');
 const total = slides.length;
 let reelHeight = 0;
 
-// ================= HEADER HEIGHT LOGIC =================
+// ================= HEADER HEIGHT & VIEWPORT LOGIC =================
 function getHeaderHeight() {
-    // Try <header>, then .site-header, fallback to 0
     const header = document.querySelector('header') || document.querySelector('.site-header');
     return header ? header.offsetHeight : 0;
+}
+
+function getViewportHeight() {
+    // Prefer visualViewport height if available (mobile browsers)
+    if (window.visualViewport) {
+        return window.visualViewport.height;
+    }
+    // Fallback to window.innerHeight
+    return window.innerHeight;
 }
 
 function setHeaderHeightVar() {
     const h = getHeaderHeight();
     document.documentElement.style.setProperty('--header-height', h + 'px');
-    reelHeight = window.innerHeight - h;
+    reelHeight = getViewportHeight() - h;
 }
 
 function updateTrack() {
@@ -166,12 +193,16 @@ window.addEventListener('touchend', () => {
     touchDeltaY = 0;
 });
 
-// ================= RESIZE HANDLER =================
+// ================= RESIZE & ORIENTATION HANDLER =================
 function handleResize() {
     setHeaderHeightVar();
     updateTrack();
 }
 window.addEventListener('resize', handleResize);
+window.addEventListener('orientationchange', handleResize);
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', handleResize);
+}
 
 // ================= INSTAGRAM EMBED =================
 function loadInstagramEmbedScript(callback) {
