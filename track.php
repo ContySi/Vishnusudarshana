@@ -226,8 +226,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         $toFmt = date('h:i A', strtotime($to));
                                         echo $dateFmt . ' | ' . $fromFmt . ' – ' . $toFmt;
                                     } else {
-                                        // If status is accepted/scheduled but no time, show not scheduled yet
-                                        if (in_array(strtolower($row['service_status']), ['accepted', 'scheduled'])) {
+                                        // If appointment is accepted and date exists but time missing
+                                        if (
+                                            strtolower($row['service_status']) === 'accepted' &&
+                                            (!empty($row['assigned_date']) || !empty($row['service_date']))
+                                        ) {
+                                            $dateVal = !empty($row['assigned_date']) ? $row['assigned_date'] : $row['service_date'];
+                                            $dateFmt = date('d-M-Y', strtotime($dateVal));
+                                            echo 'Scheduled on ' . $dateFmt . ' (Time pending)';
+                                        } elseif (in_array(strtolower($row['service_status']), ['accepted', 'scheduled'])) {
                                             echo 'Not scheduled yet';
                                         } elseif (strtolower($row['service_status']) === 'completed') {
                                             echo 'Scheduling in progress';
