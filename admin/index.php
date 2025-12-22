@@ -3,50 +3,31 @@ require_once __DIR__ . '/includes/top-menu.php';
 // Database connection
 require_once __DIR__ . '/../config/db.php';
 
-function getCount($conn, $sql, $params = []) {
-    $stmt = $conn->prepare($sql);
-    if ($params) {
-        $types = str_repeat('s', count($params));
-        $stmt->bind_param($types, ...$params);
-    }
-    $stmt->execute();
-    $stmt->bind_result($count);
-    $stmt->fetch();
-    $stmt->close();
-    return $count ? $count : 0;
+function getCount($pdo, $sql, $params = []) {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $count = $stmt->fetchColumn();
+    return $count !== false ? (int)$count : 0;
 }
 
 // STAT CARDS
-$totalAppointments = getCount($conn, "SELECT COUNT(*) FROM service_requests WHERE category_slug = ?", ['appointment']);
-$pendingAppointments = getCount($conn, "SELECT COUNT(*) FROM service_requests WHERE category_slug = ? AND service_status = ?", ['appointment', 'Received']);
-$acceptedAppointments = getCount($conn, "SELECT COUNT(*) FROM service_requests WHERE category_slug = ? AND service_status = ?", ['appointment', 'Accepted']);
-$completedAppointments = getCount($conn, "SELECT COUNT(*) FROM service_requests WHERE category_slug = ? AND service_status = ?", ['appointment', 'Completed']);
-$totalServiceRequests = getCount($conn, "SELECT COUNT(*) FROM service_requests WHERE category_slug != ?", ['appointment']);
+$totalAppointments = getCount($pdo, "SELECT COUNT(*) FROM service_requests WHERE category_slug = ?", ['appointment']);
+$pendingAppointments = getCount($pdo, "SELECT COUNT(*) FROM service_requests WHERE category_slug = ? AND service_status = ?", ['appointment', 'Received']);
+$acceptedAppointments = getCount($pdo, "SELECT COUNT(*) FROM service_requests WHERE category_slug = ? AND service_status = ?", ['appointment', 'Accepted']);
+$completedAppointments = getCount($pdo, "SELECT COUNT(*) FROM service_requests WHERE category_slug = ? AND service_status = ?", ['appointment', 'Completed']);
+$totalServiceRequests = getCount($pdo, "SELECT COUNT(*) FROM service_requests WHERE category_slug != ?", ['appointment']);
 
 // TODAY SNAPSHOT
 $today = date('Y-m-d');
-$todayAppointments = getCount($conn, "SELECT COUNT(*) FROM service_requests WHERE category_slug = ? AND DATE(created_at) = ?", ['appointment', $today]);
-$todayServices = getCount($conn, "SELECT COUNT(*) FROM service_requests WHERE category_slug != ? AND DATE(created_at) = ?", ['appointment', $today]);
-$todayPayments = getCount($conn, "SELECT COUNT(*) FROM service_requests WHERE payment_status = ? AND DATE(created_at) = ?", ['Paid', $today]);
+$todayAppointments = getCount($pdo, "SELECT COUNT(*) FROM service_requests WHERE category_slug = ? AND DATE(created_at) = ?", ['appointment', $today]);
+$todayServices = getCount($pdo, "SELECT COUNT(*) FROM service_requests WHERE category_slug != ? AND DATE(created_at) = ?", ['appointment', $today]);
+$todayPayments = getCount($pdo, "SELECT COUNT(*) FROM service_requests WHERE payment_status = ? AND DATE(created_at) = ?", ['Paid', $today]);
 
 // RECENT ACTIVITY
 $recentSql = "SELECT id, created_at, category_slug, customer_name, tracking_id, service_status FROM service_requests ORDER BY created_at DESC LIMIT 10";
-$recentStmt = $conn->prepare($recentSql);
+$recentStmt = $pdo->prepare($recentSql);
 $recentStmt->execute();
-$recentStmt->store_result();
-$recentStmt->bind_result($id, $created_at, $category_slug, $customer_name, $tracking_id, $service_status);
-$recentRows = [];
-while ($recentStmt->fetch()) {
-    $recentRows[] = [
-        'id' => $id,
-        'created_at' => $created_at,
-        'category_slug' => $category_slug,
-        'customer_name' => $customer_name,
-        'tracking_id' => $tracking_id,
-        'service_status' => $service_status
-    ];
-}
-$recentStmt->close();
+$recentRows = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
