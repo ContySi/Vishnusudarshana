@@ -2,6 +2,12 @@
 // admin/includes/top-menu.php
 // Reusable admin top navigation bar
 
+// --- BASE_URL dynamic detection (works for /, /1/, /subdir/, etc.) ---
+$scriptName = $_SERVER['SCRIPT_NAME'];
+// Example: /1/admin/services/completed-appointments.php
+$basePath = explode('/1/', $scriptName)[0];
+// Result: /1 (or empty string for root)
+
 $menu = [
     'Dashboard' => [
         'url' => '1/admin/index.php',
