@@ -1,6 +1,6 @@
 <?php
 // AJAX endpoint for dashboard recent activity (admin/index.php)
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../config/db.php';
 
 header('Content-Type: text/html; charset=UTF-8');
 
@@ -35,16 +35,20 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-foreach ($rows as $row) {
-    echo '<tr>';
-    echo '<td>' . date('d-m-Y', strtotime($row['created_at'])) . '</td>';
-    echo '<td>' . ($row['category_slug'] === 'appointment' ? 'Appointment' : 'Service') . '</td>';
-    echo '<td>' . htmlspecialchars($row['customer_name']) . '</td>';
-    echo '<td>' . htmlspecialchars($row['tracking_id']) . '</td>';
-    $statusClass = 'status-' . strtolower(str_replace(' ', '-', $row['service_status']));
-    echo '<td><span class="status-badge ' . $statusClass . '">' . htmlspecialchars($row['service_status']) . '</span></td>';
-    echo '<td><a class="view-btn" href="services/view.php?id=' . $row['id'] . ($row['category_slug'] === 'appointment' ? '&type=appointment' : '') . '" target="_blank">View</a></td>';
-    echo '</tr>';
+if (count($rows) === 0) {
+    echo '<tr><td colspan="6" class="no-data">No recent activity found.</td></tr>';
+} else {
+    foreach ($rows as $row) {
+        echo '<tr>';
+        echo '<td>' . date('d-m-Y', strtotime($row['created_at'])) . '</td>';
+        echo '<td>' . ($row['category_slug'] === 'appointment' ? 'Appointment' : 'Service') . '</td>';
+        echo '<td>' . htmlspecialchars($row['customer_name']) . '</td>';
+        echo '<td>' . htmlspecialchars($row['tracking_id']) . '</td>';
+        $statusClass = 'status-' . strtolower(str_replace(' ', '-', $row['service_status']));
+        echo '<td><span class="status-badge ' . $statusClass . '">' . htmlspecialchars($row['service_status']) . '</span></td>';
+        echo '<td><a class="view-btn" href="services/view.php?id=' . $row['id'] . ($row['category_slug'] === 'appointment' ? '&type=appointment' : '') . '" target="_blank">View</a></td>';
+        echo '</tr>';
+    }
 }
 
 // Pagination object for JS
