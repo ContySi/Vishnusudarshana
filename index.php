@@ -1,4 +1,4 @@
-hi <?php 
+<?php 
 include 'header.php';
 
 // Load today's Panchang JSON
