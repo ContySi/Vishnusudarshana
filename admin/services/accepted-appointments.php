@@ -82,13 +82,13 @@ if (!empty($acceptedDates)) {
 // Fetch appointments for selected date
 $appointments = [];
 if ($selectedDate !== null) {
-    $sql = "
-        SELECT id, tracking_id, customer_name, mobile, form_data, created_at
-        FROM service_requests
-        WHERE $whereAcceptedFuture
-          AND JSON_UNQUOTE(JSON_EXTRACT(form_data,'$.assigned_date')) = ?
-        ORDER BY created_at ASC
-    ";
+        $sql = "
+                SELECT id, tracking_id, customer_name, mobile, form_data, created_at
+                FROM service_requests
+                WHERE $whereAcceptedFuture
+                    AND JSON_UNQUOTE(JSON_EXTRACT(form_data,'$.assigned_date')) = ?
+                ORDER BY created_at ASC
+        ";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$selectedDate]);
     $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -151,6 +151,7 @@ h1 { color: #800000; margin-bottom: 18px; }
                         <th>Mobile</th>
                         <th>Email</th>
                         <th>Preferred Date</th>
+                        <th>Scheduled Time</th>
                         <th>Payment Status</th>
                         <th>Service Status</th>
                         <th>Created Date</th>
@@ -170,6 +171,8 @@ h1 { color: #800000; margin-bottom: 18px; }
                             $co = new DateTime($a['created_at']);
                             $createdDisplay = $co->format('d-M-Y');
                         }
+                        $fromTime = $fd['assigned_from_time'] ?? ($fd['time_from'] ?? '');
+                        $toTime = $fd['assigned_to_time'] ?? ($fd['time_to'] ?? '');
                     ?>
                         <tr>
                             <td><input type="checkbox" class="rowCheckbox" value="<?= (int)$a['id'] ?>"></td>
@@ -179,6 +182,17 @@ h1 { color: #800000; margin-bottom: 18px; }
                             <td><?= htmlspecialchars($fd['email'] ?? '') ?></td>
                             <td style="font-weight:600;color:#800000;">
                                 <?= htmlspecialchars($preferredDisplay) ?>
+                            </td>
+                            <td style="font-weight:600; color:#0056b3;">
+                                <?php
+                                if ($fromTime && $toTime) {
+                                    $fromFmt = date('h:i A', strtotime($fromTime));
+                                    $toFmt = date('h:i A', strtotime($toTime));
+                                    echo htmlspecialchars($fromFmt . ' – ' . $toFmt);
+                                } else {
+                                    echo 'Time not set';
+                                }
+                                ?>
                             </td>
                             <td><span class="status-badge payment-paid">Paid</span></td>
                             <td><span class="status-badge status-accepted">Accepted</span></td>
