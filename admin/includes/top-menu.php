@@ -4,7 +4,7 @@
 
 $menu = [
     'Dashboard' => [
-        'url' => '/admin/index.php',
+        'url' => '1/admin/index.php',
         'icon' => '🏠',
     ],
     'Appointments' => [
@@ -18,9 +18,9 @@ $menu = [
     'Services' => [
         'icon' => '🛠️',
         'submenu' => [
-            'Service Requests' => '/admin/services/index.php',
-            'Add New Service'  => '/admin/services/add.php',
-            'Categories'       => '/admin/services/categories.php',
+            'Service Requests' => '/admin/products/index.php',
+            'Add New Service'  => '/admin/products/add.php',
+            'Categories'       => '/admin/products/categories.php',
         ]
     ],
     'Payments' => [
