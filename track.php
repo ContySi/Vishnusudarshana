@@ -205,42 +205,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     (isset($row['category_slug']) && $row['category_slug'] === 'appointment') ||
                                     (isset($row['tracking_id']) && strpos($row['tracking_id'], 'APT-') === 0)
                                 ) {
-                                    // Try to get scheduling info
-                                    $scheduled = false;
-                                    $date = $from = $to = '';
-                                    // Try service_requests fields first
-                                    if (!empty($row['assigned_date']) && !empty($row['assigned_from_time']) && !empty($row['assigned_to_time'])) {
-                                        $date = $row['assigned_date'];
-                                        $from = $row['assigned_from_time'];
-                                        $to = $row['assigned_to_time'];
-                                        $scheduled = true;
-                                    } elseif (!empty($row['service_date']) && !empty($row['time_from']) && !empty($row['time_to'])) {
-                                        $date = $row['service_date'];
-                                        $from = $row['time_from'];
-                                        $to = $row['time_to'];
-                                        $scheduled = true;
+                                    // Parse form_data for scheduling info
+                                    $fd = [];
+                                    if (!empty($row['form_data'])) {
+                                        $fd = json_decode($row['form_data'], true) ?? [];
                                     }
-                                    if ($scheduled) {
-                                        $dateFmt = date('d-M-Y', strtotime($date));
-                                        $fromFmt = date('h:i A', strtotime($from));
-                                        $toFmt = date('h:i A', strtotime($to));
-                                        echo $dateFmt . ' | ' . $fromFmt . ' – ' . $toFmt;
+                                    $preferredDate = $fd['preferred_date'] ?? '';
+                                    $fromTime = $fd['assigned_from_time'] ?? ($fd['time_from'] ?? '');
+                                    $toTime = $fd['assigned_to_time'] ?? ($fd['time_to'] ?? '');
+                                    if ($preferredDate && $fromTime && $toTime) {
+                                        $dateFmt = DateTime::createFromFormat('Y-m-d', $preferredDate);
+                                        $dateDisp = $dateFmt ? $dateFmt->format('d-M-Y') : htmlspecialchars($preferredDate);
+                                        $fromFmt = date('h:i A', strtotime($fromTime));
+                                        $toFmt = date('h:i A', strtotime($toTime));
+                                        echo htmlspecialchars($dateDisp . ' | ' . $fromFmt . ' – ' . $toFmt);
+                                    } elseif ($preferredDate) {
+                                        $dateFmt = DateTime::createFromFormat('Y-m-d', $preferredDate);
+                                        $dateDisp = $dateFmt ? $dateFmt->format('d-M-Y') : htmlspecialchars($preferredDate);
+                                        echo 'Scheduled on ' . htmlspecialchars($dateDisp) . ' (Time pending)';
                                     } else {
-                                        // If appointment is accepted and date exists but time missing
-                                        if (
-                                            strtolower($row['service_status']) === 'accepted' &&
-                                            (!empty($row['assigned_date']) || !empty($row['service_date']))
-                                        ) {
-                                            $dateVal = !empty($row['assigned_date']) ? $row['assigned_date'] : $row['service_date'];
-                                            $dateFmt = date('d-M-Y', strtotime($dateVal));
-                                            echo 'Scheduled on ' . $dateFmt . ' (Time pending)';
-                                        } elseif (in_array(strtolower($row['service_status']), ['accepted', 'scheduled'])) {
-                                            echo 'Not scheduled yet';
-                                        } elseif (strtolower($row['service_status']) === 'completed') {
-                                            echo 'Scheduling in progress';
-                                        } else {
-                                            echo 'Scheduling in progress';
-                                        }
+                                        echo 'Time not set';
                                     }
                                 } else {
                                     echo '-';
