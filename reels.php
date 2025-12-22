@@ -11,7 +11,6 @@ include 'header.php';
 ?>
 
 <style>
-/* ================= GLOBAL RESET ================= */
 body {
     margin: 0;
     padding: 0;
@@ -21,20 +20,22 @@ body {
 }
 ::-webkit-scrollbar { display: none; }
 
-/* ================= REELS LAYOUT ================= */
 .reels-wrapper {
     position: fixed;
-    inset: 0;
+    left: 0;
+    right: 0;
     width: 100vw;
-    height: 100vh;
     background: #000;
     overflow: hidden;
     z-index: 1;
+    top: var(--header-height, 0px);
+    height: calc(100vh - var(--header-height, 0px));
+    /* No inset: 0, so header stays above */
 }
 
 .reels-track {
     width: 100vw;
-    height: 100vh;
+    height: 100%;
     display: flex;
     flex-direction: column;
     transition: transform 0.55s cubic-bezier(.4,1.4,.6,1);
@@ -43,7 +44,7 @@ body {
 
 .reel-slide {
     width: 100vw;
-    height: 100vh;
+    height: calc(100vh - var(--header-height, 0px));
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -69,9 +70,8 @@ body {
 </style>
 
 <main class="main-content">
-    <div class="reels-wrapper">
+    <div class="reels-wrapper" id="reelsWrapper">
         <div class="reels-track" id="reelsTrack">
-
             <?php if (empty($reels)): ?>
                 <div class="reel-slide" style="color:#fff;font-size:1.2em;">
                     No reels available.
@@ -87,13 +87,12 @@ body {
                     </div>
                 <?php endforeach; ?>
             <?php endif; ?>
-
         </div>
     </div>
 </main>
 
 <script>
-/* ================= STATE ================= */
+// ================= STATE =================
 let currentIndex = 0;
 let isTransitioning = false;
 let lastScroll = 0;
@@ -104,12 +103,26 @@ const SCROLL_DEBOUNCE = 500;
 const SWIPE_THRESHOLD = 60;
 
 const track = document.getElementById('reelsTrack');
+const wrapper = document.getElementById('reelsWrapper');
 const slides = document.querySelectorAll('.reel-slide');
 const total = slides.length;
+let reelHeight = 0;
 
-/* ================= CORE ================= */
+// ================= HEADER HEIGHT LOGIC =================
+function getHeaderHeight() {
+    // Try <header>, then .site-header, fallback to 0
+    const header = document.querySelector('header') || document.querySelector('.site-header');
+    return header ? header.offsetHeight : 0;
+}
+
+function setHeaderHeightVar() {
+    const h = getHeaderHeight();
+    document.documentElement.style.setProperty('--header-height', h + 'px');
+    reelHeight = window.innerHeight - h;
+}
+
 function updateTrack() {
-    track.style.transform = `translateY(-${currentIndex * 100}vh)`;
+    track.style.transform = `translateY(-${currentIndex * reelHeight}px)`;
 }
 
 function gotoIndex(idx) {
@@ -123,15 +136,13 @@ function gotoIndex(idx) {
 function nextReel() { gotoIndex(currentIndex + 1); }
 function prevReel() { gotoIndex(currentIndex - 1); }
 
-/* ================= INPUT HANDLERS ================= */
+// ================= INPUT HANDLERS =================
 window.addEventListener('wheel', function (e) {
     const now = Date.now();
     if (now - lastScroll < SCROLL_DEBOUNCE) return;
     if (Math.abs(e.deltaY) < 20) return;
-
     if (e.deltaY > 0) nextReel();
     else prevReel();
-
     lastScroll = now;
 }, { passive: true });
 
@@ -155,14 +166,20 @@ window.addEventListener('touchend', () => {
     touchDeltaY = 0;
 });
 
-/* ================= INSTAGRAM EMBED ================= */
+// ================= RESIZE HANDLER =================
+function handleResize() {
+    setHeaderHeightVar();
+    updateTrack();
+}
+window.addEventListener('resize', handleResize);
+
+// ================= INSTAGRAM EMBED =================
 function loadInstagramEmbedScript(callback) {
     if (window.instgrm && window.instgrm.Embeds) {
         callback();
         return;
     }
     if (window._igLoading) return;
-
     window._igLoading = true;
     const s = document.createElement('script');
     s.src = "https://www.instagram.com/embed.js";
@@ -172,6 +189,7 @@ function loadInstagramEmbedScript(callback) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    setHeaderHeightVar();
     updateTrack();
     loadInstagramEmbedScript(() => {
         if (window.instgrm && window.instgrm.Embeds) {
