@@ -113,11 +113,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         if (preg_match('/^[0-9]{10,15}$/', $input)) {
             // Numeric: treat as mobile
-            $stmt = $pdo->prepare('SELECT tracking_id, category_slug, created_at, total_amount, payment_status, service_status FROM service_requests WHERE mobile = ? ORDER BY created_at DESC');
+            $stmt = $pdo->prepare('SELECT * FROM service_requests WHERE mobile = ? ORDER BY created_at DESC');
             $stmt->execute([$input]);
         } else {
             // Otherwise: treat as tracking ID
-            $stmt = $pdo->prepare('SELECT tracking_id, category_slug, created_at, total_amount, payment_status, service_status FROM service_requests WHERE tracking_id = ? ORDER BY created_at DESC');
+            $stmt = $pdo->prepare('SELECT * FROM service_requests WHERE tracking_id = ? ORDER BY created_at DESC');
             $stmt->execute([$input]);
         }
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -158,6 +158,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <th>Tracking ID</th>
                             <th>Service Category</th>
                             <th>Date</th>
+                            <?php
+                            // Check if any result is an appointment to show the column
+                            $showScheduleCol = false;
+                            foreach ($results as $row) {
+                                if (
+                                    (isset($row['category_slug']) && $row['category_slug'] === 'appointment') ||
+                                    (isset($row['tracking_id']) && strpos($row['tracking_id'], 'APT-') === 0)
+                                ) {
+                                    $showScheduleCol = true;
+                                    break;
+                                }
+                            }
+                            if ($showScheduleCol) {
+                                echo '<th>Scheduled Date & Time</th>';
+                            }
+                            ?>
                             <th>Total Amount</th>
                             <th>Payment Status</th>
                             <th>Service Status</th>
@@ -175,11 +191,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     'astrology-consultation' => 'Astrology Consultation',
                                     'muhurat-event' => 'Muhurat & Event Guidance',
                                     'pooja-vastu-enquiry' => 'Pooja, Ritual & Vastu Enquiry',
+                                    'appointment' => 'Appointment'
                                 ];
                                 $cat = $row['category_slug'];
                                 echo isset($categoryTitles[$cat]) ? $categoryTitles[$cat] : htmlspecialchars($cat);
                             ?></td>
                             <td><?php echo date('d-m-Y', strtotime($row['created_at'])); ?></td>
+                            <?php if ($showScheduleCol): ?>
+                                <td>
+                                <?php
+                                // Only show for appointments
+                                if (
+                                    (isset($row['category_slug']) && $row['category_slug'] === 'appointment') ||
+                                    (isset($row['tracking_id']) && strpos($row['tracking_id'], 'APT-') === 0)
+                                ) {
+                                    // Try to get scheduling info
+                                    $scheduled = false;
+                                    $date = $from = $to = '';
+                                    // Try service_requests fields first
+                                    if (!empty($row['assigned_date']) && !empty($row['assigned_from_time']) && !empty($row['assigned_to_time'])) {
+                                        $date = $row['assigned_date'];
+                                        $from = $row['assigned_from_time'];
+                                        $to = $row['assigned_to_time'];
+                                        $scheduled = true;
+                                    } elseif (!empty($row['service_date']) && !empty($row['time_from']) && !empty($row['time_to'])) {
+                                        $date = $row['service_date'];
+                                        $from = $row['time_from'];
+                                        $to = $row['time_to'];
+                                        $scheduled = true;
+                                    }
+                                    if ($scheduled) {
+                                        $dateFmt = date('d-M-Y', strtotime($date));
+                                        $fromFmt = date('h:i A', strtotime($from));
+                                        $toFmt = date('h:i A', strtotime($to));
+                                        echo $dateFmt . ' | ' . $fromFmt . ' – ' . $toFmt;
+                                    } else {
+                                        // If status is accepted/scheduled but no time, show not scheduled yet
+                                        if (in_array(strtolower($row['service_status']), ['accepted', 'scheduled'])) {
+                                            echo 'Not scheduled yet';
+                                        } elseif (strtolower($row['service_status']) === 'completed') {
+                                            echo 'Scheduling in progress';
+                                        } else {
+                                            echo 'Scheduling in progress';
+                                        }
+                                    }
+                                } else {
+                                    echo '-';
+                                }
+                                ?>
+                                </td>
+                            <?php endif; ?>
                             <td>₹<?php echo number_format($row['total_amount'], 2); ?></td>
                             <td><span class="status-badge status-<?php echo strtolower($row['payment_status']); ?>"><?php echo htmlspecialchars($row['payment_status']); ?></span></td>
                             <td><span class="status-badge status-<?php echo strtolower($row['service_status']); ?>"><?php echo htmlspecialchars($row['service_status']); ?></span></td>
